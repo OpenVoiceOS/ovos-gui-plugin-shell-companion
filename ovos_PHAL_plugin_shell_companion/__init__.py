@@ -8,17 +8,21 @@ import string
 import subprocess
 import threading
 import time
+from datetime import timedelta
 from distutils.spawn import find_executable
 from os.path import exists, join, isfile
 
-import requests
 from json_database import JsonStorage
-from ovos_bus_client import Message
+from ovos_config import Configuration
 from ovos_config.config import read_mycroft_config, update_mycroft_config
 from ovos_plugin_manager.phal import PHALPlugin
+from ovos_utils.events import EventSchedulerInterface
 from ovos_utils.log import LOG
 from ovos_utils.network_utils import get_ip
+from ovos_utils.time import now_local
 from ovos_utils.xdg_utils import xdg_config_home, xdg_data_home
+
+from ovos_bus_client import Message
 
 
 class BrightnessControlRPIPValidator:
@@ -43,13 +47,20 @@ class OVOSShellCompanion(PHALPlugin):
     - dashboard manager  (TODO deprecate)
 
     """
+
     def __init__(self, bus=None, config=None):
         super().__init__(bus=bus, name="ovos-PHAL-shell-companion", config=config)
+        self.init_event_scheduler()
         self.init_color_manager()
         self.init_notifications_widgets()
         self.init_config_provider()
         if BrightnessControlRPIPValidator.validate():
             self.init_brightness_ctrl()
+
+    def init_event_scheduler(self):
+        self.event_scheduler = EventSchedulerInterface()
+        self.event_scheduler.set_id(self.name)
+        self.event_scheduler.set_bus(self.bus)
 
     def init_dashboard_manager(self):
         self.bus.on("ovos.PHAL.dashboard.enable",
@@ -113,19 +124,12 @@ class OVOSShellCompanion(PHALPlugin):
         self.ddcutil_brightness_code = None
         self.auto_dim_enabled = False
         self.auto_night_mode_enabled = False
-        self.timer_thread = None
-        self.nightmode_thread = None
-        self.geolocate_api_thread = None
-        self.location = None
-        self.sunset_time = None
+        self.timer_thread = None  # TODO - use event scheduler too
 
-        self.geolocate_api()
-        self.start_geolocate_api_timer()
+        self.get_sunset_time()
+
         self.is_auto_dim_enabled()
         self.is_auto_night_mode_enabled()
-
-        LOG.info(f"Location is {self.location}")
-        LOG.info(f"Sunset time is {self.sunset_time}")
 
         self.discover()
 
@@ -799,62 +803,52 @@ class OVOSShellCompanion(PHALPlugin):
             pass
 
     ##### AUTO NIGHT MODE HANDLING #####
-    def get_time_of_day(self):
-        LOG.debug("Getting time of day")
-        now = datetime.datetime.now()
-        return now.time()
-
-    def check_if_sun_has_set(self):
-        LOG.debug("Checking if sun has set")
-        # check if the time now is after the sunset time
-        current_time = self.get_time_of_day()
-        sunset_time = self.sunset_time.time()
-        if self.sunset_time:
-            if current_time > sunset_time:
-                return True
-            else:
-                return False
-        else:
-            return False
-
-    def get_sunset_time(self):
+    def get_sunset_time(self, message=None):
         LOG.debug("Getting sunset time")
-        if self.location:
-            location_lat = self.location["coordinate"]["latitude"]
-            location_lon = self.location["coordinate"]["longitude"]
-            response = requests.get(
-                f"http://api.sunrise-sunset.org/json?lat={location_lat}&lng={location_lon}&formatted=0")
-            response_json = response.json()
-            sunset_time_str = response_json["results"]["sunset"]
-            sunset_time = datetime.datetime.strptime(
-                sunset_time_str, "%Y-%m-%dT%H:%M:%S%z")
-            self.sunset_time = sunset_time
-        else:
-            # Set the sunset time to 10:00pm if no location is set
-            self.sunset_time = datetime.time(22, 0)
+        date = now_local()
+        try:
+            from astral import LocationInfo
+            from astral.sun import sun
+            location = Configuration()["location"]
+            lat = location["coordinate"]["latitude"]
+            lon = location["coordinate"]["longitude"]
+            tz = location["timezone"]["code"]
+            city = LocationInfo("Some city", "Some location", tz, lat, lon)
+            s = sun(city.observer, date=date)["sunset"]
+            self.sunset_time = s["sunset"]
+            self.sunrise_time = s["sunrise"]
+        except:
+            self.sunset_time = datetime.datetime(year=date.year, month=date.month,
+                                                 day=date.day, hour=22)
+            self.sunrise_time = self.sunset_time + timedelta(hours=8)
 
-    def start_auto_night_mode(self):
-        LOG.debug("Starting auto night mode")
-        self.nightmode_thread = threading.Thread(
-            target=self.auto_night_mode_timer)
-        self.nightmode_thread.start()
+        # check sunset times again in 24 hours
+        self.event_scheduler.schedule_event(self.get_sunset_time,
+                                            when=date + timedelta(hours=24),
+                                                name="ovos-shell.suntimes.check")
 
-    def auto_night_mode_timer(self):
-        while self.auto_night_mode_enabled:
-            time.sleep(60)
-            LOG.debug("Checking if it is night time")
-            if self.check_if_sun_has_set():
+    def start_auto_night_mode(self, message=None):
+        if self.auto_night_mode_enabled:
+            date = now_local()
+            self.event_scheduler.schedule_event(self.start_auto_night_mode,
+                                                when=date + timedelta(hours=1),
+                                                name="ovos-shell.night.mode.check")
+            if self.sunset_time < date < self.sunrise_time:
                 LOG.debug("It is night time")
-                self.bus.emit(
-                    Message("phal.brightness.control.auto.night.mode.enabled"))
+                self.bus.emit(Message("phal.brightness.control.auto.night.mode.enabled"))
+            else:
+                LOG.debug("It is day time")
+                # TODO - implement this message in shell / check if it exists
+                # i just made it up without checking
+                self.bus.emit(Message("phal.brightness.control.auto.night.mode.disabled"))
 
     def stop_auto_night_mode(self):
         LOG.debug("Stopping auto night mode")
         self.auto_night_mode_enabled = False
-        if self.nightmode_thread:
-            self.nightmode_thread.join()
+        self.event_scheduler.cancel_scheduled_event("ovos-shell.night.mode.check")
 
     def is_auto_night_mode_enabled(self):
+        # TODO - deprecate this config file and follow plugin convention
         display_config_path_local = join(xdg_config_home(), "OvosDisplay.conf")
         if exists(display_config_path_local):
             display_configuration = JsonStorage(display_config_path_local)
@@ -867,39 +861,3 @@ class OVOSShellCompanion(PHALPlugin):
             self.start_auto_night_mode()
         else:
             self.stop_auto_night_mode()
-
-    def geolocate_api(self):
-        # TODO - ovos-backend-client
-        LOG.debug("Getting Geolocation")
-        try:
-            response = requests.get("http://ip-api.com/json")
-            response_json = response.json()
-            self.location = {
-                "name": response_json["city"],
-                "coordinate": {
-                    "latitude": response_json["lat"],
-                    "longitude": response_json["lon"]
-                },
-                "timezone": response_json["timezone"],
-                "country": response_json["country"]
-            }
-        except Exception as e:
-            LOG.error("Error getting Geolocation")
-            LOG.error(e)
-            self.location = None
-
-        self.get_sunset_time()
-
-    def geolocate_api_timer(self):
-        while True:
-            time.sleep(14400)
-            self.geolocate_api()
-
-    def start_geolocate_api_timer(self):
-        self.geolocate_api_thread = threading.Thread(
-            target=self.geolocate_api_timer)
-        self.geolocate_api_thread.start()
-
-    def stop_geolocate_api_timer(self):
-        if self.geolocate_api_thread:
-            self.geolocate_api_thread.join()

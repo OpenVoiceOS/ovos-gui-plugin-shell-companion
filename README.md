@@ -1,6 +1,6 @@
 # OVOS Shell companion
 
-provides various bus APIs that integrate with ovos-shell, used to be several individual plugins
+provides various bus APIs that integrate with ovos-shell
     
     - color scheme manager
     - notifications widgets
@@ -9,8 +9,10 @@ provides various bus APIs that integrate with ovos-shell, used to be several ind
     - dashboard manager  (TODO deprecate)
     
 
+these used to be several individual plugins but they all are ovos-shell specific integrations and ovos-shell requires all of them, so they have been unified
 
-deprecated packages, now part of this one:
+
+the following packages have been deprecated in favor of this repo:
 - https://github.com/OpenVoiceOS/ovos-PHAL-plugin-dashboard
 - https://github.com/OpenVoiceOS/ovos-PHAL-plugin-configuration-provider
 - https://github.com/OpenVoiceOS/ovos-PHAL-plugin-notification-widgets
