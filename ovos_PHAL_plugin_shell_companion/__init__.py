@@ -3,8 +3,6 @@ import json
 import os
 import platform
 import re
-import secrets
-import string
 import subprocess
 import threading
 import time
@@ -13,16 +11,14 @@ from distutils.spawn import find_executable
 from os.path import exists, join, isfile
 
 from json_database import JsonStorage
+from ovos_bus_client import Message
 from ovos_config import Configuration
-from ovos_config.config import read_mycroft_config, update_mycroft_config
+from ovos_config.config import update_mycroft_config
 from ovos_plugin_manager.phal import PHALPlugin
 from ovos_utils.events import EventSchedulerInterface
 from ovos_utils.log import LOG
-from ovos_utils.network_utils import get_ip
 from ovos_utils.time import now_local
 from ovos_utils.xdg_utils import xdg_config_home, xdg_data_home
-
-from ovos_bus_client import Message
 
 
 class BrightnessControlRPIPValidator:
@@ -44,8 +40,6 @@ class OVOSShellCompanion(PHALPlugin):
     - notifications widgets
     - configuration provider  (settings UI)
     - brightness control  (night mode etc)
-    - dashboard manager  (TODO deprecate)
-
     """
 
     def __init__(self, bus=None, config=None):
@@ -61,20 +55,6 @@ class OVOSShellCompanion(PHALPlugin):
         self.event_scheduler = EventSchedulerInterface()
         self.event_scheduler.set_id(self.name)
         self.event_scheduler.set_bus(self.bus)
-
-    def init_dashboard_manager(self):
-        self.bus.on("ovos.PHAL.dashboard.enable",
-                    self.handle_device_developer_enable_dash)
-        self.bus.on("ovos.PHAL.dashboard.disable",
-                    self.handle_device_developer_disable_dash)
-        self.bus.on("ovos.PHAL.dashboard.get.status",
-                    self.handle_device_dashboard_status_check)
-
-        # Dashboard Specific
-        alphabet = string.ascii_letters + string.digits
-        self.dash_secret = ''.join(secrets.choice(alphabet) for i in range(5))
-        self.username = self.config.get('username') or "OVOS"
-        LOG.info("Dashboard Plugin Initialized")
 
     def init_notifications_widgets(self):
         self.bus.on("ovos.notification.api.request.storage.model",
@@ -213,50 +193,6 @@ class OVOSShellCompanion(PHALPlugin):
         except Exception as e:
             LOG.error(e)
             return
-
-    #### dashboard manager
-    def handle_device_dashboard_status_check(self, _):
-        if self._check_dash_running():
-            self.bus.emit(Message("ovos.PHAL.dashboard.status.response",
-                                  {"status": True,
-                                   "url": "https://{0}:5000".format(get_ip()),
-                                   "user": self.username,
-                                   "password": self.dash_secret}))
-        else:
-            self.bus.emit(Message("ovos.PHAL.dashboard.status.response",
-                                  {"status": False, "url": None,
-                                   "user": None, "password": None}))
-
-    def _check_dash_running(self) -> bool:
-        build_status_check_call = "systemctl --user is-active --quiet ovos-dashboard@'{0}'.service".format(
-            self.dash_secret)
-        dash_status = subprocess.run(build_status_check_call, shell=True,
-                                     env=dict(os.environ))
-        LOG.debug(f"Dash status check got return: {dash_status.returncode}")
-        return dash_status.returncode == 0
-
-    def handle_device_developer_enable_dash(self, message):
-        os.environ["SIMPLELOGIN_USERNAME"] = self.username
-        os.environ["SIMPLELOGIN_PASSWORD"] = self.dash_secret
-        build_call = "systemctl --user start ovos-dashboard@'{0}'.service".format(
-            self.dash_secret)
-        LOG.debug(f'Starting dash with: `{build_call}`')
-        dash_create = subprocess.run(build_call, shell=True,
-                                     env=dict(os.environ))
-        LOG.debug(f'Dash returned: {dash_create.returncode}')
-        # time.sleep(3)
-        self.handle_device_dashboard_status_check(message)
-
-    def handle_device_developer_disable_dash(self, message):
-        build_call = "systemctl --user stop ovos-dashboard@'{0}'.service".format(
-            self.dash_secret)
-        subprocess.Popen([build_call], shell=True)
-        time.sleep(3)
-
-        if not self._check_dash_running():
-            self.bus.emit(Message("ovos.PHAL.dashboard.status.response",
-                                  {"status": False, "url": None, "user": None,
-                                   "password": None}))
 
     #### notifications widget manager
     def notificationAPI_update_storage_model(self, message=None):
@@ -413,7 +349,7 @@ class OVOSShellCompanion(PHALPlugin):
 
     #### config provider
     def build_settings_meta(self):
-        readable_config = read_mycroft_config()
+        readable_config = Configuration()
         misc = {}
         new_config = {}
 
@@ -588,7 +524,7 @@ class OVOSShellCompanion(PHALPlugin):
     def set_settings_in_config(self, message=None):
         group_name = message.data.get("group_name")
         configuration = message.data.get("configuration")
-        mycroft_config = read_mycroft_config()
+        mycroft_config = Configuration()
 
         misc = {}
         new_config = {}
@@ -825,7 +761,7 @@ class OVOSShellCompanion(PHALPlugin):
         # check sunset times again in 24 hours
         self.event_scheduler.schedule_event(self.get_sunset_time,
                                             when=date + timedelta(hours=24),
-                                                name="ovos-shell.suntimes.check")
+                                            name="ovos-shell.suntimes.check")
 
     def start_auto_night_mode(self, message=None):
         if self.auto_night_mode_enabled:
