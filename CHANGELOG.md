@@ -1,5 +1,9 @@
 # Changelog
 
+## [V0.0.0a2](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-shell-companion/tree/V0.0.0a2) (2023-05-15)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-shell-companion/compare/V0.0.0a1...V0.0.0a2)
+
 ## [V0.0.0a1](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-shell-companion/tree/V0.0.0a1) (2023-05-15)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-shell-companion/compare/9133c7dde1f0127109549faf6ef1a73e5b5d9c09...V0.0.0a1)
