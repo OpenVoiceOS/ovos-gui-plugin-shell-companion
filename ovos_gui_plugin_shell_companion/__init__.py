@@ -1,19 +1,15 @@
-import json
 import platform
-from os.path import exists, join
 
-from json_database import JsonStorage
 from ovos_bus_client import Message
 from ovos_utils import network_utils
 from ovos_utils.fingerprinting import get_mycroft_version
 from ovos_utils.log import LOG
-from ovos_utils.xdg_utils import xdg_config_home
 
 from ovos_gui_plugin_shell_companion.brightness import BrightnessManager
 from ovos_gui_plugin_shell_companion.color_manager import ColorManager
+from ovos_gui_plugin_shell_companion.config import get_ovos_shell_config
 from ovos_gui_plugin_shell_companion.cui import ConfigUIManager
 from ovos_gui_plugin_shell_companion.wigets import WidgetManager
-from ovos_gui_plugin_shell_companion.config import get_ovos_shell_config
 from ovos_plugin_manager.templates.gui import GUIExtension
 
 
@@ -29,7 +25,8 @@ class OVOSShellCompanionExtension(GUIExtension):
         permanent (bool): disable unloading of GUI skills on gui client disconnections
     """
 
-    def __init__(self, bus, gui, config, preload_gui=False, permanent=True):
+    def __init__(self, config, bus=None, gui=None,
+                 preload_gui=False, permanent=True):
         config["homescreen_supported"] = True
         LOG.info("OVOS Shell: Initializing")
         super().__init__(bus, gui, config, preload_gui, permanent)
