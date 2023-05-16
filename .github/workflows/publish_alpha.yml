@@ -6,7 +6,7 @@ on:
     branches:
       - dev
     paths-ignore:
-      - 'ovos_PHAL_plugin_shell_companion/version.py'
+      - 'ovos_gui_plugin_shell_companion/version.py'
       - 'test/**'
       - '.github/**'
       - '.gitignore'
