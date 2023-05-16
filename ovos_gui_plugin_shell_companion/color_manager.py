@@ -8,6 +8,7 @@ from ovos_utils.xdg_utils import xdg_config_home, xdg_data_home
 
 
 class ColorManager:
+    """ manage color themes """
     def __init__(self, bus):
         self.bus = bus
         self.theme_path = join(xdg_data_home(), "OVOS", "ColorSchemes")

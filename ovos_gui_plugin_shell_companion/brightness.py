@@ -5,15 +5,14 @@ import threading
 import time
 from datetime import timedelta
 from distutils.spawn import find_executable
-from os.path import exists, join, isfile
+from os.path import isfile
 
-from json_database import JsonStorage
 from ovos_bus_client import Message
 from ovos_config import Configuration
 from ovos_utils.events import EventSchedulerInterface
 from ovos_utils.log import LOG
 from ovos_utils.time import now_local
-from ovos_utils.xdg_utils import xdg_config_home
+from ovos_gui_plugin_shell_companion.config import get_ovos_shell_config
 
 
 class BrightnessManager:
@@ -63,15 +62,9 @@ class BrightnessManager:
     #### brightness manager - TODO generic non rpi support
     # Check if the auto dim is enabled
     def is_auto_dim_enabled(self, message=None):
-        LOG.info("Checking if auto dim is enabled")
-        display_config_path_local = join(xdg_config_home(), "OvosDisplay.conf")
-        if exists(display_config_path_local):
-            display_configuration = JsonStorage(display_config_path_local)
-            self.auto_dim_enabled = display_configuration.get(
-                "auto_dim", False)
-        else:
-            self.auto_dim_enabled = False
-
+        LOG.debug("Checking if auto dim is enabled")
+        display_config = get_ovos_shell_config()
+        self.auto_dim_enabled = display_config.get("auto_dim", False)
         if self.auto_dim_enabled:
             self.start_auto_dim()
         else:
@@ -277,14 +270,8 @@ class BrightnessManager:
         self.event_scheduler.cancel_scheduled_event("ovos-shell.night.mode.check")
 
     def is_auto_night_mode_enabled(self):
-        # TODO - deprecate this config file and follow plugin convention
-        display_config_path_local = join(xdg_config_home(), "OvosDisplay.conf")
-        if exists(display_config_path_local):
-            display_configuration = JsonStorage(display_config_path_local)
-            self.auto_night_mode_enabled = display_configuration.get(
-                "auto_nightmode", False)
-        else:
-            self.auto_night_mode_enabled = False
+        display_config = get_ovos_shell_config()
+        self.auto_night_mode_enabled = display_config.get("auto_nightmode", False)
 
         if self.auto_night_mode_enabled:
             self.start_auto_night_mode()
