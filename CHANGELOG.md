@@ -1,12 +1,16 @@
 # Changelog
 
-## [Unreleased](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/HEAD)
+## [0.0.0a4](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/0.0.0a4) (2023-05-25)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/V0.0.0a3...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/V0.0.0a3...0.0.0a4)
 
 **Closed issues:**
 
 - Cannot pull new pre-release version [\#1](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/issues/1)
+
+**Merged pull requests:**
+
+- Update automation to shared actions [\#2](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/2) ([NeonDaniel](https://github.com/NeonDaniel))
 
 ## [V0.0.0a3](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/V0.0.0a3) (2023-05-15)
 
