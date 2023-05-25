@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/HEAD)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/V0.0.0a3...HEAD)
+
+**Closed issues:**
+
+- Cannot pull new pre-release version [\#1](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/issues/1)
+
 ## [V0.0.0a3](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/V0.0.0a3) (2023-05-15)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/V0.0.0a2...V0.0.0a3)
