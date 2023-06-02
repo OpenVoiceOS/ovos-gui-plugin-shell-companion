@@ -5,7 +5,7 @@ from unittest import mock
 from unittest.mock import patch
 
 from ovos_config import Configuration
-
+from ovos_utils.gui import GUIInterface
 from ovos_gui_plugin_shell_companion import OVOSShellCompanionExtension as SmartSpeakerExtension
 from .mocks import MessageBusMock, base_config
 
@@ -26,7 +26,8 @@ class TestSmartSpeakerExtension:
             })
         mock_get.return_value = config
         smartSpeaker = SmartSpeakerExtension(config, MessageBusMock(),
-                                             MessageBusMock())
+                                             GUIInterface("test",
+                                                          MessageBusMock()))
         smartSpeaker.set_backend_type = mock.Mock()
         message_data = Message("ovos.pairing.set.backend",
                                {'backend': 'unknown'})
@@ -44,7 +45,8 @@ class TestSmartSpeakerExtension:
             })
         mock_get.return_value = config
         smartSpeaker = SmartSpeakerExtension(config, MessageBusMock(),
-                                             MessageBusMock())
+                                             GUIInterface("test",
+                                                          MessageBusMock()))
         smartSpeaker.start_homescreen_process = mock.Mock()
         message_data = Message("ovos.pairing.process.completed", {})
         smartSpeaker.start_homescreen_process(message_data)
