@@ -28,6 +28,8 @@ class BrightnessManager:
         self.auto_night_mode_enabled = False
         self.timer_thread = None  # TODO - use event scheduler too
 
+        self.sunset_time = None
+        self.sunrise_time = None
         self.get_sunset_time()
 
         self.is_auto_dim_enabled()
@@ -227,7 +229,7 @@ class BrightnessManager:
 
     def get_sunset_time(self, message=None):
         LOG.debug("Getting sunset time")
-        date = now_local()
+        now_time = now_local()
         try:
             from astral import LocationInfo
             from astral.sun import sun
@@ -236,17 +238,19 @@ class BrightnessManager:
             lon = location["coordinate"]["longitude"]
             tz = location["timezone"]["code"]
             city = LocationInfo("Some city", "Some location", tz, lat, lon)
-            s = sun(city.observer, date=date)["sunset"]
+            s = sun(city.observer, date=now_time)["sunset"]
             self.sunset_time = s["sunset"]
             self.sunrise_time = s["sunrise"]
-        except:
-            self.sunset_time = datetime.datetime(year=date.year, month=date.month,
-                                                 day=date.day, hour=22)
+        except Exception as e:
+            LOG.exception(f"Using default times for sunrise/sunset: {e}")
+            self.sunset_time = datetime.datetime(year=now_time.year,
+                                                 month=now_time.month,
+                                                 day=now_time.day, hour=22)
             self.sunrise_time = self.sunset_time + timedelta(hours=8)
 
         # check sunset times again in 24 hours
         self.event_scheduler.schedule_event(self.get_sunset_time,
-                                            when=date + timedelta(hours=24),
+                                            when=now_time + timedelta(hours=24),
                                             name="ovos-shell.suntimes.check")
 
     def start_auto_night_mode(self, message=None):
