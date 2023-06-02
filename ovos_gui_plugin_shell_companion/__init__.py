@@ -29,7 +29,8 @@ class OVOSShellCompanionExtension(GUIExtension):
                  preload_gui=False, permanent=True):
         config["homescreen_supported"] = True
         LOG.info("OVOS Shell: Initializing")
-        super().__init__(bus, gui, config, preload_gui, permanent)
+        super().__init__(config=config, bus=bus, gui=gui,
+                         preload_gui=preload_gui, permanent=permanent)
         self.local_display_config = get_ovos_shell_config()
         self.about_page_data = []
         self.build_initial_about_page_data()
