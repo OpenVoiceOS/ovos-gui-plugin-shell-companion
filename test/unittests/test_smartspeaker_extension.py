@@ -8,7 +8,7 @@ from ovos_config import Configuration
 from ovos_utils.gui import GUIInterface
 from ovos_utils.messagebus import FakeBus
 from ovos_gui_plugin_shell_companion import OVOSShellCompanionExtension as SmartSpeakerExtension
-from .mocks import MessageBusMock, base_config
+from .mocks import base_config
 
 PATCH_MODULE = "ovos_gui.extensions"
 
