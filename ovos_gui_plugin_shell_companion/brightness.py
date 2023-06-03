@@ -237,7 +237,7 @@ class BrightnessManager:
             lon = location["coordinate"]["longitude"]
             tz = location["timezone"]["code"]
             city = LocationInfo("Some city", "Some location", tz, lat, lon)
-            s = sun(city.observer, date=now_time)["sunset"]
+            s = sun(city.observer, date=now_time)
             self.sunset_time = s["sunset"]
             self.sunrise_time = s["sunrise"]
         except Exception as e:
