@@ -6,7 +6,8 @@ import time
 from datetime import timedelta
 from distutils.spawn import find_executable
 from os.path import isfile
-
+from astral import LocationInfo
+from astral.sun import sun
 from ovos_bus_client import Message
 from ovos_config import Configuration
 from ovos_utils.events import EventSchedulerInterface
@@ -231,8 +232,6 @@ class BrightnessManager:
         LOG.debug("Getting sunset time")
         now_time = now_local()
         try:
-            from astral import LocationInfo
-            from astral.sun import sun
             location = Configuration()["location"]
             lat = location["coordinate"]["latitude"]
             lon = location["coordinate"]["longitude"]

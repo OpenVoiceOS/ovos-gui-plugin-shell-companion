@@ -1,3 +1,4 @@
 ovos_plugin_manager>=0.0.23a15
-ovos_utils
-ovos-bus-client
+ovos_utils~=0.0.33
+ovos-bus-client~=0.0.3
+astral~=3.0
