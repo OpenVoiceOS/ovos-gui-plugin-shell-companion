@@ -1,8 +1,16 @@
 # Changelog
 
-## [0.0.0a5](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/0.0.0a5) (2023-06-08)
+## [0.0.0a6](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/0.0.0a6) (2023-06-08)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/V0.0.0a4...0.0.0a5)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/V0.0.0a5...0.0.0a6)
+
+**Fixed bugs:**
+
+- Set GUI Resource dir [\#6](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/6) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [V0.0.0a5](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/V0.0.0a5) (2023-06-08)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/V0.0.0a4...V0.0.0a5)
 
 **Fixed bugs:**
 
