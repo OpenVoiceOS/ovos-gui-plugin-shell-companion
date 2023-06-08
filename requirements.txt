@@ -1,5 +1,4 @@
 ovos_plugin_manager>=0.0.23a15
-# ovos_utils~=0.0.33
-ovos-utils@git+https://github.com/openvoiceos/ovos-utils@TEST_EventScheduler
+ovos-utils~=0.0, >=0.0.34a1
 ovos-bus-client~=0.0.3
 astral~=3.0
