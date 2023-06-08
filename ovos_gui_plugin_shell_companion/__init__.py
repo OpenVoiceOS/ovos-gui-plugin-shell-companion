@@ -1,12 +1,13 @@
 import platform
 
+from os.path import join, dirname
 from ovos_bus_client.client import MessageBusClient
-
 from ovos_bus_client import Message
 from ovos_utils import network_utils
 from ovos_utils.fingerprinting import get_mycroft_version
 from ovos_utils.gui import GUIInterface
 from ovos_utils.log import LOG
+from ovos_config.config import Configuration
 
 from ovos_gui_plugin_shell_companion.brightness import BrightnessManager
 from ovos_gui_plugin_shell_companion.color_manager import ColorManager
@@ -33,6 +34,13 @@ class OVOSShellCompanionExtension(GUIExtension):
                  gui: GUIInterface = None,
                  preload_gui=False, permanent=True):
         config["homescreen_supported"] = True
+        res_dir = join(dirname(__file__), "res")
+        gui = gui or GUIInterface("ovos_gui_plugin_shell_companion",
+                                  bus=bus, config=Configuration(),
+                                  resource_dir=res_dir)
+        if not gui.resource_dir:
+            LOG.info(f"Setting default GUI resource directory to: {res_dir}")
+            gui.resource_dir = res_dir
         LOG.info("OVOS Shell: Initializing")
         super().__init__(config=config, bus=bus, gui=gui,
                          preload_gui=preload_gui, permanent=permanent)
