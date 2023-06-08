@@ -140,22 +140,28 @@ class ConfigUIManager:
             return [field, type_str]
 
     def populate_section_description(self, section_name, section_group):
-        with open(os.path.dirname(os.path.realpath(__file__)) + "/descriptions.json", "r") as f:
+        # TODO: Resolve file from resources
+        with open(os.path.dirname(os.path.realpath(__file__)) +
+                  "/descriptions.json", "r") as f:
             description_json = json.load(f)
             descriptions = description_json["collection"]
             for description in descriptions:
                 if description["type"] == "section":
-                    if description["key"] == section_name and description["group"] == section_group:
+                    if description["key"] == section_name and \
+                            description["group"] == section_group:
                         return description["value"]
         return ""
 
     def populate_field_description(self, field_name, field_group):
-        with open(os.path.dirname(os.path.realpath(__file__)) + "/descriptions.json", "r") as f:
+        # TODO: Resolve file from resources
+        with open(os.path.dirname(os.path.realpath(__file__)) +
+                  "/descriptions.json", "r") as f:
             description_json = json.load(f)
             descriptions = description_json["collection"]
             for description in descriptions:
                 if description["type"] == "field":
-                    if description["key"] == field_name and description["group"] == field_group:
+                    if description["key"] == field_name and \
+                            description["group"] == field_group:
                         return description["value"]
         return ""
 

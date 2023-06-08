@@ -1,6 +1,6 @@
 import os
 import re
-from os.path import join
+from os.path import join, dirname
 
 from ovos_bus_client import Message
 from ovos_utils.log import LOG
@@ -58,7 +58,7 @@ class ColorManager:
                 theme_file = open(join(xdg_system_path, file_name), "r")
                 theme = theme_file.read()
                 theme_file.close()
-
+            # TODO: Default `theme`
             name = re.search(r"name=(.*)", theme).group(1)
             primaryColor = re.search(r"primaryColor=(.*)", theme).group(1)
             secondaryColor = re.search(r"secondaryColor=(.*)", theme).group(1)

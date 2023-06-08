@@ -1,8 +1,11 @@
 import platform
 
+from ovos_bus_client.client import MessageBusClient
+
 from ovos_bus_client import Message
 from ovos_utils import network_utils
 from ovos_utils.fingerprinting import get_mycroft_version
+from ovos_utils.gui import GUIInterface
 from ovos_utils.log import LOG
 
 from ovos_gui_plugin_shell_companion.brightness import BrightnessManager
@@ -19,17 +22,20 @@ class OVOSShellCompanionExtension(GUIExtension):
     It handles all events sent from ovos-shell
 
     Args:
+        config: plugin configuration
         bus: MessageBus instance
         gui: GUI instance
         preload_gui (bool): load GUI skills even if gui client not connected
         permanent (bool): disable unloading of GUI skills on gui client disconnections
     """
 
-    def __init__(self, config, bus=None, gui=None,
+    def __init__(self, config: dict, bus: MessageBusClient = None,
+                 gui: GUIInterface = None,
                  preload_gui=False, permanent=True):
         config["homescreen_supported"] = True
         LOG.info("OVOS Shell: Initializing")
-        super().__init__(bus, gui, config, preload_gui, permanent)
+        super().__init__(config=config, bus=bus, gui=gui,
+                         preload_gui=preload_gui, permanent=permanent)
         self.local_display_config = get_ovos_shell_config()
         self.about_page_data = []
         self.build_initial_about_page_data()

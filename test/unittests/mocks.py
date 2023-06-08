@@ -54,27 +54,3 @@ def mock_config(temp_dir):
     get_config_mock.return_value = config
     return get_config_mock
 
-
-class MessageBusMock:
-    """Replaces actual message bus calls in unit tests.
-
-    The message bus should not be running during unit tests so mock it
-    out in a way that makes it easy to test code that calls it.
-    """
-    def __init__(self):
-        self.message_types = []
-        self.message_data = []
-        self.event_handlers = []
-
-    def emit(self, message):
-        self.message_types.append(message.msg_type)
-        self.message_data.append(message.data)
-
-    def on(self, event, _):
-        self.event_handlers.append(event)
-
-    def once(self, event, _):
-        self.event_handlers.append(event)
-
-    def wait_for_response(self, message):
-        self.emit(message)
