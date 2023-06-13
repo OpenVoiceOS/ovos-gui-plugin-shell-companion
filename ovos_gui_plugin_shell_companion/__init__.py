@@ -37,7 +37,7 @@ class OVOSShellCompanionExtension(GUIExtension):
         res_dir = join(dirname(__file__), "res")
         gui = gui or GUIInterface("ovos_gui_plugin_shell_companion",
                                   bus=bus, config=Configuration(),
-                                  resource_dir=res_dir)
+                                  ui_directories={"qt5": res_dir})
         if not gui.resource_dir:
             LOG.info(f"Setting default GUI resource directory to: {res_dir}")
             gui.resource_dir = res_dir
