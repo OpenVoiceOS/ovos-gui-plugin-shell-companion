@@ -35,7 +35,7 @@ Button {
 
     onCheckedChanged: {
         if(checked) {
-            Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../../snd/clicked.wav"))
+            Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
         }
     }
 

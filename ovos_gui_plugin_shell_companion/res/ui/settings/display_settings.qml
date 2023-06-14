@@ -160,7 +160,7 @@ Item {
 
                     onClicked: {
                         console.log(autoWallpaperRotationSwitch.checked)
-                        Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
+                        Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
                         triggerGuiEvent("speaker.extension.display.set.wallpaper.rotation", {"wallpaper_rotation": autoWallpaperRotationSwitch.checked})
                     }
                 }
@@ -228,7 +228,7 @@ Item {
 
                     onClicked: {
                         console.log(autoDimSwitch.checked)
-                        Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
+                        Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
                         triggerGuiEvent("speaker.extension.display.set.auto.dim", {"auto_dim": autoDimSwitch.checked})
                     }
                 }
@@ -296,7 +296,7 @@ Item {
 
                     onClicked: {
                         console.log(autoNightmodeSwitch.checked)
-                        Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
+                        Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
                         triggerGuiEvent("speaker.extension.display.set.auto.nightmode", {"auto_nightmode": autoNightmodeSwitch.checked})
                     }
                 }
@@ -364,7 +364,7 @@ Item {
 
                     onClicked: {
                         console.log(displayMenuLabelsSwitch.checked)
-                        Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
+                        Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
                         Mycroft.MycroftController.sendRequest("ovos.shell.set.menuLabels", {"enabled": displayMenuLabelsSwitch.checked})
                     }
                 }
@@ -428,7 +428,7 @@ Item {
             }
 
             onClicked: {
-                Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
+                Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
                 console.log("Sending Show Wallpaper Page Here")
                 triggerGuiEvent("mycroft.device.settings.wallpapers", {})
             }
@@ -490,7 +490,7 @@ Item {
             anchors.fill: parent
             onClicked: {
                 triggerGuiEvent("mycroft.device.settings", {})
-                Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
+                Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
             }
         }
     }

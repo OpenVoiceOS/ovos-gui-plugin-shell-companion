@@ -178,7 +178,7 @@ ItemDelegate {
 
     onClicked: {
         if(clickEnabled){
-            Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
+            Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
             styleViewPopUp.setTheme(modelDataStyle)
             styleViewPopUp.close()
             Mycroft.MycroftController.sendRequest("ovos.theme.get", {})

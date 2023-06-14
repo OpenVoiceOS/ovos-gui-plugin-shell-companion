@@ -119,7 +119,7 @@ Item {
                 }
 
                 onClicked: {
-                    Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
+                    Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
                     triggerGuiEvent("mycroft.device.set.idle", {"selected": modelData.id})
                 }
             }
@@ -177,7 +177,7 @@ Item {
         MouseArea {
             anchors.fill: parent
             onClicked: {
-                Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
+                Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
                 triggerGuiEvent("mycroft.device.settings", {})
             }
         }
