@@ -145,7 +145,7 @@ Item {
                     MouseArea {
                         anchors.fill: parent
                         onClicked: {
-                            Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
+                            Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
                             primaryColorSelectorPopup.open()
                         }
                     }
@@ -187,7 +187,7 @@ Item {
                     MouseArea {
                         anchors.fill: parent
                         onClicked: {
-                            Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
+                            Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
                             secondaryColorSelectorPopup.open()
                         }
                     }
@@ -263,7 +263,7 @@ Item {
                     MouseArea {
                         anchors.fill: parent
                         onClicked: {
-                            Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
+                            Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
                             setNameBoxPopup.open()
                         }
                     }
@@ -329,7 +329,7 @@ Item {
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
-                        Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
+                        Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
                         previewPopUpBox.open()
                     }
                 }
@@ -385,7 +385,7 @@ Item {
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
-                        Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
+                        Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
                         Mycroft.MycroftController.sendRequest("ovos.shell.gui.color.scheme.generate", {"theme_name": createThemeView.selectedThemeName, "primaryColor": createThemeView.selectedPrimaryColor, "secondaryColor": createThemeView.selectedSecondaryColor, "textColor": createThemeView.selectedTextColor})
                         visualBusyIndicatorBox.visible = true
                         visualBusyIndicatorBox.enabled = true
@@ -446,7 +446,7 @@ Item {
         MouseArea {
             anchors.fill: parent
             onClicked: {
-                Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
+                Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
                 triggerGuiEvent("mycroft.device.settings.customize", {})
             }
         }
@@ -593,7 +593,7 @@ Item {
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
-                        Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
+                        Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
                         previewPopUpBox.close()
                     }
                 }

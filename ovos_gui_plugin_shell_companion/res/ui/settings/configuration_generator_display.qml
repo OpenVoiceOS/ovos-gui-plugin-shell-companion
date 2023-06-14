@@ -286,7 +286,7 @@ Item {
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
-                    Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
+                    Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
                     Mycroft.MycroftController.sendRequest("ovos.phal.configuration.provider.list.groups", {})
                 }
             }
@@ -331,7 +331,7 @@ Item {
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
-                    Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
+                    Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
                     Mycroft.MycroftController.sendRequest("ovos.phal.configuration.provider.set", {"configuration": configurationLoaderView.updateFieldList, "group_name": configurationLoaderView.groupName})
                     Mycroft.MycroftController.sendRequest("ovos.phal.configuration.provider.list.groups", {})
                 }

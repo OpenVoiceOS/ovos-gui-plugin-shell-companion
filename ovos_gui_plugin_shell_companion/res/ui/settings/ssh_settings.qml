@@ -77,7 +77,7 @@ Item {
                 Layout.preferredHeight: Kirigami.Units.gridUnit * 3
                 text: qsTr("Enable SSH")
                 onClicked: {
-                    Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
+                    Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
                     Mycroft.MycroftController.sendRequest("system.ssh.enable", {"display": false})
                 }
             }
@@ -87,7 +87,7 @@ Item {
                 Layout.preferredHeight: Kirigami.Units.gridUnit * 3
                 text: qsTr("Disable SSH")
                 onClicked: {
-                    Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
+                    Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
                     Mycroft.MycroftController.sendRequest("system.ssh.disable", {"display": false})
                 }
             }
@@ -141,7 +141,7 @@ Item {
         MouseArea {
             anchors.fill: parent
             onClicked: {
-                Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
+                Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
                 triggerGuiEvent("mycroft.device.settings", {})
             }
         }

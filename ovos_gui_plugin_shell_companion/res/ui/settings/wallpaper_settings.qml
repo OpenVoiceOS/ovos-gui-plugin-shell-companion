@@ -366,7 +366,7 @@ Item {
             anchors.fill: parent
             onClicked: {
                 triggerGuiEvent("mycroft.device.settings", {})
-                Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
+                Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
             }
         }
     }
