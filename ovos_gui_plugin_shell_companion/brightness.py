@@ -245,12 +245,10 @@ class BrightnessManager:
                                                 name="ovos-shell.night.mode.check")
             if self.sunset_time < date < self.sunrise_time:
                 LOG.debug("It is night time")
-                self.bus.emit(Message("phal.brightness.control.auto.night.mode.enabled"))
+                self.bus.emit(Message("speaker.extension.display.set.auto.nightmode", {"auto_nightmode": True}))
             else:
                 LOG.debug("It is day time")
-                # TODO - implement this message in shell / check if it exists
-                # i just made it up without checking
-                self.bus.emit(Message("phal.brightness.control.auto.night.mode.disabled"))
+                self.bus.emit(Message("speaker.extension.display.set.auto.nightmode", {"auto_nightmode": True}))
 
     def stop_auto_night_mode(self):
         LOG.debug("Stopping auto night mode")
