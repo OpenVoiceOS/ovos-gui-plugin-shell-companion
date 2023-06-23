@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 import os
+
 from setuptools import setup
 
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
 
+
 def get_version():
     """ Find the version of the package"""
     version = None
-    version_file = os.path.join(BASEDIR, 'ovos_PHAL_plugin_shell_companion', 'version.py')
+    version_file = os.path.join(BASEDIR, 'ovos_gui_plugin_shell_companion', 'version.py')
     major, minor, build, alpha = (None, None, None, None)
     with open(version_file) as f:
         for line in f:
@@ -28,6 +30,7 @@ def get_version():
         version += f"a{alpha}"
     return version
 
+
 def required(requirements_file):
     """ Read requirements file and remove comments and empty lines. """
     with open(os.path.join(BASEDIR, requirements_file), 'r') as f:
@@ -38,6 +41,7 @@ def required(requirements_file):
         return [pkg for pkg in requirements
                 if pkg.strip() and not pkg.startswith("#")]
 
+
 def package_files(directory):
     paths = []
     for (path, directories, filenames) in os.walk(directory):
@@ -45,17 +49,26 @@ def package_files(directory):
             paths.append(os.path.join('..', path, filename))
     return paths
 
-PLUGIN_ENTRY_POINT = 'ovos-PHAL-plugin-shell-companion=ovos_PHAL_plugin_shell_companion:OVOSShellCompanion'
+
+def get_description():
+    with open(os.path.join(BASEDIR, "README.md"), "r") as f:
+        long_description = f.read()
+    return long_description
+
+
+PLUGIN_ENTRY_POINT = 'ovos-gui-plugin-shell-companion=ovos_gui_plugin_shell_companion:OVOSShellCompanionExtension'
 setup(
-    name='ovos-PHAL-plugin-shell-companion',
+    name='ovos-gui-plugin-shell-companion',
     version=get_version(),
-    description='Color scheme manager plugin for OpenVoiceOS hardware abstraction layer',
-    url='https://github.com/OpenVoiceOS/ovos-PHAL-plugin-shell-companion',
+    description='GUI plugin for ovos-shell',
+    long_description=get_description(),
+    long_description_content_type="text/markdown",
+    url='https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion',
     author='Aiix',
     author_email='aix.m@outlook.com',
     license='Apache-2.0',
-    packages=['ovos_PHAL_plugin_shell_companion'],
-    package_data={'': package_files('ovos_PHAL_plugin_shell_companion')},
+    packages=['ovos_gui_plugin_shell_companion'],
+    package_data={'': package_files('ovos_gui_plugin_shell_companion')},
     install_requires=required("requirements.txt"),
     zip_safe=True,
     include_package_data=True,
@@ -71,5 +84,5 @@ setup(
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
     ],
-    entry_points={'ovos.plugin.phal': PLUGIN_ENTRY_POINT}
+    entry_points={'ovos.plugin.gui': PLUGIN_ENTRY_POINT}
 )

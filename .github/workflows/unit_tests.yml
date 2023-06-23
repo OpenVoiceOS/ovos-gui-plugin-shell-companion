@@ -1,0 +1,45 @@
+name: Unit Tests
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  py_build_tests:
+    uses: neongeckocom/.github/.github/workflows/python_build_tests.yml@master
+    with:
+      python_version: "3.8"
+  unit_tests:
+    strategy:
+      matrix:
+        python-version: [ 3.7, 3.8, 3.9 ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt install python3-dev swig
+          python -m pip install build wheel
+      - name: Install repo
+        run: |
+          pip install -e .
+      - name: Install test dependencies
+        run: |
+          pip install -r test/requirements.txt
+      - name: Run unittests
+        run: |
+          pytest --cov=ovos_gui_plugin_shell_companion --cov-report xml test/unittests
+          # NOTE: additional pytest invocations should also add the --cov-append flag
+          #       or they will overwrite previous invocations' coverage reports
+          #       (for an example, see OVOS Skill Manager's workflow)
+      - name: Upload coverage
+        if: "${{ matrix.python-version == '3.9' }}"
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{secrets.CODECOV_TOKEN}}
+          files: coverage.xml
+          verbose: true
