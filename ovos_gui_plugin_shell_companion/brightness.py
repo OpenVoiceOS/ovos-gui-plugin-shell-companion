@@ -248,7 +248,7 @@ class BrightnessManager:
                 self.bus.emit(Message("speaker.extension.display.set.auto.nightmode", {"auto_nightmode": True}))
             else:
                 LOG.debug("It is day time")
-                self.bus.emit(Message("speaker.extension.display.set.auto.nightmode", {"auto_nightmode": True}))
+                self.bus.emit(Message("speaker.extension.display.set.auto.nightmode", {"auto_nightmode": False}))
 
     def stop_auto_night_mode(self):
         LOG.debug("Stopping auto night mode")
