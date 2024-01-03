@@ -58,12 +58,13 @@ class BrightnessManager:
         if not platform.machine().startswith("arm"):
             return False
         # check if needed utils installed
-        if self.vcgencmd is None:
+        if shutil.which("vcgencmd") is None:
             LOG.info("Missing vcgencmd command.")
             return False
-        if self.ddcutil is None:
-            LOG.info("Missing ddcutil command.")
-            return False
+        # ddcutil is used only for HDMI displays
+        if shutil.which("ddcutil"):
+            LOG.debug("ddcutil not available for HDMI display adjustments")
+        return True
 
     #### brightness manager - TODO generic non rpi support
     # Check if the auto dim is enabled
@@ -82,7 +83,7 @@ class BrightnessManager:
             LOG.info("Discovering brightness control device interface")
             proc = subprocess.Popen([self.vcgencmd,
                                      "get_config", "display_default_lcd"], stdout=subprocess.PIPE)
-            if proc.stdout.read().decode("utf-8").strip() == "1":
+            if proc.stdout.read().decode("utf-8").strip() in ('1', 'display_default_lcd=1'):
                 self.device_interface = "DSI"
             else:
                 self.device_interface = "HDMI"
