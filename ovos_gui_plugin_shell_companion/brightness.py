@@ -82,7 +82,7 @@ class BrightnessManager:
             LOG.info("Discovering brightness control device interface")
             proc = subprocess.Popen([self.vcgencmd,
                                      "get_config", "display_default_lcd"], stdout=subprocess.PIPE)
-            if proc.stdout.read().decode("utf-8").strip() == "1":
+            if proc.stdout.read().decode("utf-8").strip() in ('1', 'display_default_lcd=1'):
                 self.device_interface = "DSI"
             else:
                 self.device_interface = "HDMI"
