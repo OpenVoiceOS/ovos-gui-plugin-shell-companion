@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.1a2](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/0.0.1a2) (2024-01-03)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/0.0.1a1...0.0.1a2)
+
+**Fixed bugs:**
+
+- vcgencmd binary not in previous location [\#12](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/issues/12)
+
+**Merged pull requests:**
+
+- check if vcgencmd and ddcutil exists [\#14](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/14) ([denics](https://github.com/denics))
+
 ## [0.0.1a1](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/0.0.1a1) (2023-12-30)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/0.0.0...0.0.1a1)
