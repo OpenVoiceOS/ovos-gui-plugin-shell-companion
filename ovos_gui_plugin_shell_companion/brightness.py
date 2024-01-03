@@ -1,5 +1,4 @@
 import datetime
-import platform
 import subprocess
 import threading
 import time
@@ -47,24 +46,6 @@ class BrightnessManager:
         self.bus.on("gui.page_gained_focus", self.undim_display)
         self.bus.on("recognizer_loop:wakeword", self.undim_display)
         self.bus.on("recognizer_loop:record_begin", self.undim_display)
-
-    def init_event_scheduler(self):
-        self.event_scheduler = EventSchedulerInterface()
-        self.event_scheduler.set_id(self.name)
-        self.event_scheduler.set_bus(self.bus)
-
-    @staticmethod
-    def validate():
-        if not platform.machine().startswith("arm"):
-            return False
-        # check if needed utils installed
-        if shutil.which("vcgencmd") is None:
-            LOG.info("Missing vcgencmd command.")
-            return False
-        # ddcutil is used only for HDMI displays
-        if shutil.which("ddcutil"):
-            LOG.debug("ddcutil not available for HDMI display adjustments")
-        return True
 
     #### brightness manager - TODO generic non rpi support
     # Check if the auto dim is enabled
