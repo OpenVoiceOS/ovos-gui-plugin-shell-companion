@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a4](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/0.0.1a4) (2024-01-03)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/0.0.1a3...0.0.1a4)
+
+**Merged pull requests:**
+
+- Remove unused methods apparently leftover from a previous implementation [\#18](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/18) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.0.1a3](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/0.0.1a3) (2024-01-03)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/0.0.1a2...0.0.1a3)
