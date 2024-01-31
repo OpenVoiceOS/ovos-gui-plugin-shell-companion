@@ -4,7 +4,6 @@ from os.path import join, dirname
 from ovos_bus_client.client import MessageBusClient
 from ovos_bus_client import Message
 from ovos_utils import network_utils
-from ovos_utils.fingerprinting import get_mycroft_version
 from ovos_utils.gui import GUIInterface
 from ovos_utils.log import LOG
 from ovos_config.config import Configuration
@@ -190,7 +189,10 @@ class OVOSShellCompanionExtension(GUIExtension):
 
     def build_initial_about_page_data(self):
         uname_info = platform.uname()
-        version = get_mycroft_version() or "unknown"
+        try:
+            from ovos_core.version import OVOS_VERSION_STR as version
+        except ImportError:
+            version = "unknown"
         self.about_page_data.append({"display_key": "Kernel Version", "display_value": uname_info[2]})
         self.about_page_data.append({"display_key": "Core Version", "display_value": version})
         self.about_page_data.append({"display_key": "Python Version", "display_value": platform.python_version()})
