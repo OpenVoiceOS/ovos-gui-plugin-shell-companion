@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a5](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/0.0.1a5) (2024-01-31)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/0.0.1a4...0.0.1a5)
+
+**Fixed bugs:**
+
+- fix/version\_string [\#20](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/20) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.1a4](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/0.0.1a4) (2024-01-03)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/0.0.1a3...0.0.1a4)
