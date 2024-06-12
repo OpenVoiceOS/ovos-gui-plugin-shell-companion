@@ -1,9 +1,6 @@
 import platform
 
 from os.path import join, dirname
-
-from ovos_bus_client.message import GUIMessage
-
 from ovos_bus_client.client import MessageBusClient
 from ovos_bus_client import Message
 from ovos_utils import network_utils
