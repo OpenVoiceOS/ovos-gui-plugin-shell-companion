@@ -1,6 +1,9 @@
 import platform
 
 from os.path import join, dirname
+
+from ovos_bus_client.message import GUIMessage
+
 from ovos_bus_client.client import MessageBusClient
 from ovos_bus_client import Message
 from ovos_utils import network_utils
@@ -155,11 +158,25 @@ class OVOSShellCompanionExtension(GUIExtension):
         self.gui['system_info'] = system_information
         self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
 
-    def handle_display_wallpaper_rotation_config_set(self, message):
+    def handle_display_wallpaper_rotation_config_set(self, message: GUIMessage):
+        """
+        Handle a GUI event requesting a new wallpaper rotation setting
+        @param message: `speaker.extension.display.set.wallpaper.rotation`
+        """
         wallpaper_rotation = message.data.get("wallpaper_rotation", False)
         self.local_display_config["wallpaper_rotation"] = wallpaper_rotation
         self.local_display_config.store()
-        self.bus.emit(Message("speaker.extension.display.wallpaper.rotation.changed"))
+
+        LOG.info(message.data)
+        # TODO: Is rotation time defined here?
+
+        if wallpaper_rotation:
+            msg_type = "ovos.wallpaper.manager.enable.auto.rotation"
+        else:
+            msg_type = "ovos.wallpaper.manager.disable.auto.rotation"
+        self.bus.emit(message.forward(msg_type))
+        # TODO Is the below message consumed anywhere?
+        self.bus.emit(message.forward("speaker.extension.display.wallpaper.rotation.changed"))
 
     def handle_display_auto_dim_config_set(self, message):
         auto_dim = message.data.get("auto_dim", False)
