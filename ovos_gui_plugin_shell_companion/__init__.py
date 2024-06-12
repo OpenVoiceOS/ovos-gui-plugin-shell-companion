@@ -80,7 +80,8 @@ class OVOSShellCompanionExtension(GUIExtension):
         # Display settings
         self.gui.register_handler("speaker.extension.display.set.wallpaper.rotation",
                                   self.handle_display_wallpaper_rotation_config_set)
-        self.gui.register_handler("speaker.extension.display.set.auto.dim", self.handle_display_auto_dim_config_set)
+        self.gui.register_handler("speaker.extension.display.set.auto.dim",
+                                  self.handle_display_auto_dim_config_set)
         self.gui.register_handler("speaker.extension.display.set.auto.nightmode",
                                   self.handle_display_auto_nightmode_config_set)
 
@@ -145,7 +146,10 @@ class OVOSShellCompanionExtension(GUIExtension):
     def handle_device_display_settings(self, message):
         LOG.debug(f"Display settings: {self.local_display_config}")
         self.gui['state'] = 'settings/display_settings'
+
+        # TODO: Refactor below to query PHAL plugin
         self.gui['display_wallpaper_rotation'] = self.local_display_config.get("wallpaper_rotation", False)
+
         self.gui['display_auto_dim'] = self.local_display_config.get("auto_dim", False)
         self.gui['display_auto_nightmode'] = self.local_display_config.get("auto_nightmode", False)
         self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
@@ -163,12 +167,10 @@ class OVOSShellCompanionExtension(GUIExtension):
         Handle a GUI event requesting a new wallpaper rotation setting
         @param message: `speaker.extension.display.set.wallpaper.rotation`
         """
+        # TODO: This should come from the PHAL plugin, not a separate config
         wallpaper_rotation = message.data.get("wallpaper_rotation", False)
         self.local_display_config["wallpaper_rotation"] = wallpaper_rotation
         self.local_display_config.store()
-
-        # TODO Is the below message consumed anywhere?
-        self.bus.emit(message.forward("speaker.extension.display.wallpaper.rotation.changed"))
 
     def handle_display_auto_dim_config_set(self, message):
         auto_dim = message.data.get("auto_dim", False)
