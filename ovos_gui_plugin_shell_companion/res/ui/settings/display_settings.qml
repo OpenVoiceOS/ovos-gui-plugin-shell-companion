@@ -161,6 +161,13 @@ Item {
                     onClicked: {
                         console.log(autoWallpaperRotationSwitch.checked)
                         Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
+                    if (autoWallpaperRotationSwitch.checked) {
+                        Mycroft.MycroftController.sendRequest("ovos.wallpaper.manager.enable.auto.rotation")
+                    }
+                    else {
+                        Mycroft.MycroftController.sendRequest("ovos.wallpaper.manager.disable.auto.rotation")
+                    }
+                        // TODO: deprecate this event?
                         triggerGuiEvent("speaker.extension.display.set.wallpaper.rotation", {"wallpaper_rotation": autoWallpaperRotationSwitch.checked})
                     }
                 }

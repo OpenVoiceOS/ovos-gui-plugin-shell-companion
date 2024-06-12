@@ -167,14 +167,6 @@ class OVOSShellCompanionExtension(GUIExtension):
         self.local_display_config["wallpaper_rotation"] = wallpaper_rotation
         self.local_display_config.store()
 
-        LOG.info(message.data)
-        # TODO: Is rotation time defined here?
-
-        if wallpaper_rotation:
-            msg_type = "ovos.wallpaper.manager.enable.auto.rotation"
-        else:
-            msg_type = "ovos.wallpaper.manager.disable.auto.rotation"
-        self.bus.emit(message.forward(msg_type))
         # TODO Is the below message consumed anywhere?
         self.bus.emit(message.forward("speaker.extension.display.wallpaper.rotation.changed"))
 
