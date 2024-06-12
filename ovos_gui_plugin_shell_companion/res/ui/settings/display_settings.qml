@@ -167,8 +167,6 @@ Item {
                         else {
                             Mycroft.MycroftController.sendRequest("ovos.wallpaper.manager.disable.auto.rotation", {}, {"session": {"session_id": "default"}})
                         }
-                        // TODO: deprecate this event?
-                        triggerGuiEvent("speaker.extension.display.set.wallpaper.rotation", {"wallpaper_rotation": autoWallpaperRotationSwitch.checked})
                     }
                 }
             }
