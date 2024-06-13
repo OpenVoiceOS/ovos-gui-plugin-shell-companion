@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.0.1a6](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/0.0.1a6) (2024-06-13)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/0.0.1a5...0.0.1a6)
+
+**Fixed bugs:**
+
+- \[BUG\] Wallpaper\(s\) are not being rotated through [\#27](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/issues/27)
+- Update wallpaper rotation to handle changes from GUI [\#25](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/25) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.0.1a5](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/0.0.1a5) (2024-01-31)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/0.0.1a4...0.0.1a5)
