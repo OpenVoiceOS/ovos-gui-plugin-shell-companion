@@ -81,7 +81,7 @@ class BrightnessManager:
                         "I2C bus: ")[1].strip().split("\n")[0]
                     self.ddcutil_detected_bus = bus_code.split("-")[1].strip()
                 else:
-                    ddcutil_detected_bus = None
+                    self.ddcutil_detected_bus = None
                     LOG.error("Display is not detected by DDCUTIL")
 
                 if self.ddcutil_detected_bus:
@@ -177,11 +177,6 @@ class BrightnessManager:
         while self.auto_dim_enabled:
             time.sleep(60)
             LOG.debug("Adjusting brightness automatically")
-            if self.device_interface == "HDMI":
-                current_brightness = 100
-            if self.device_interface == "DSI":
-                current_brightness = 255
-
             self.bus.emit(
                 Message("phal.brightness.control.auto.dim.update", {"brightness": 20}))
             self.set_brightness(20)
@@ -245,10 +240,10 @@ class BrightnessManager:
                                                 name="ovos-shell.night.mode.check")
             if self.sunset_time < date < self.sunrise_time:
                 LOG.debug("It is night time")
-                self.bus.emit(Message("speaker.extension.display.set.auto.nightmode", {"auto_nightmode": True}))
+                self.bus.emit(Message("speaker.extension.display.set.auto.dim", {"auto_dim": True}))
             else:
                 LOG.debug("It is day time")
-                self.bus.emit(Message("speaker.extension.display.set.auto.nightmode", {"auto_nightmode": False}))
+                self.bus.emit(Message("speaker.extension.display.set.auto.dim", {"auto_dim": False}))
 
     def stop_auto_night_mode(self):
         LOG.debug("Stopping auto night mode")
