@@ -250,7 +250,11 @@ class BrightnessManager:
         self.auto_night_mode_enabled = False
         self.event_scheduler.cancel_scheduled_event("ovos-shell.night.mode.check")
 
-    def is_auto_night_mode_enabled(self):
+    def is_auto_night_mode_enabled(self, *args, **kwargs):
+        if args:
+            LOG.debug("Received arguments: {}".format(args))
+        if kwargs:
+            LOG.debug("Received keyword arguments: {}".format(kwargs))
         display_config = get_ovos_shell_config()
         self.auto_night_mode_enabled = display_config.get("auto_nightmode", False)
 
