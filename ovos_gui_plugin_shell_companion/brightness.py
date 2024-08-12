@@ -53,8 +53,10 @@ class BrightnessManager:
         display_config = get_ovos_shell_config()
         self.auto_dim_enabled = display_config.get("auto_dim", False)
         if self.auto_dim_enabled:
+            self.auto_dim_enabled = True
             self.start_auto_dim()
         else:
+            self.auto_dim_enabled = False
             self.stop_auto_dim()
 
     # Discover the brightness control device interface (HDMI / DSI) on the Raspberry PI
