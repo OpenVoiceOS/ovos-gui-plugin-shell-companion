@@ -185,7 +185,11 @@ class BrightnessManager:
                 self.set_brightness(20)
             else:
                 LOG.debug("Setting changed since last scheduled event, stopping auto dim")
+                level = 255 if self.device_interface == "DSI" else 100
                 self.auto_dim_enabled = False
+                self.bus.emit(
+                    Message("phal.brightness.control.auto.dim.update", {"brightness": level}))
+                self.set_brightness(level)
 
     def stop_auto_dim(self):
         LOG.debug("Stopping Auto Dim")
