@@ -179,9 +179,13 @@ class BrightnessManager:
             event = threading.Event()
             event.wait(60)
             LOG.debug("Adjusting brightness automatically")
-            self.bus.emit(
-                Message("phal.brightness.control.auto.dim.update", {"brightness": 20}))
-            self.set_brightness(20)
+            if self.auto_dim_enabled:
+                self.bus.emit(
+                    Message("phal.brightness.control.auto.dim.update", {"brightness": 20}))
+                self.set_brightness(20)
+            else:
+                LOG.debug("Setting changed since last scheduled event, stopping auto dim")
+                self.auto_dim_enabled = False
 
     def stop_auto_dim(self):
         LOG.debug("Stopping Auto Dim")
