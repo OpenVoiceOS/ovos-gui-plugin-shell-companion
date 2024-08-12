@@ -1,8 +1,6 @@
 import datetime
 import subprocess
 import threading
-import time
-import shutil
 from datetime import timedelta
 from astral import LocationInfo
 from astral.sun import sun
@@ -175,7 +173,8 @@ class BrightnessManager:
 
     def auto_dim_timer(self):
         while self.auto_dim_enabled:
-            time.sleep(60)
+            event = threading.Event()
+            event.wait(60)
             LOG.debug("Adjusting brightness automatically")
             self.bus.emit(
                 Message("phal.brightness.control.auto.dim.update", {"brightness": 20}))
