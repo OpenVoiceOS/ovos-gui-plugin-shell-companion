@@ -66,18 +66,18 @@ class BrightnessManager:
         self.bus.on("phal.brightness.control.get", self.query_current_brightness)
         self.bus.on("phal.brightness.control.set", self.set_brightness_from_bus)
         self.bus.on(
-            "speaker.extension.display.auto.dim.changed", self.is_auto_dim_enabled
+            "speaker.extension.display.auto.dim.changed", self.evaluate_settings
         )
         self.bus.on(
             "speaker.extension.display.auto.nightmode.changed",
-            self.is_auto_night_mode_enabled,
+            self.evaluate_settings,
         )
         self.bus.on("gui.page_interaction", self.undim_display)
         self.bus.on("gui.page_gained_focus", self.undim_display)
         self.bus.on("recognizer_loop:wakeword", self.undim_display)
         self.bus.on("recognizer_loop:record_begin", self.undim_display)
 
-        self.evaluate_initial_settings()
+        self.evaluate_settings()
 
     @property
     def auto_dim(self):
@@ -195,7 +195,7 @@ class BrightnessManager:
             self.device_interface = "DSI"
             self.max_brightness = BrightnessConstants.MAX_BRIGHTNESS_DSI.value
 
-    def evaluate_initial_settings(self):
+    def evaluate_settings(self):
         if self.auto_dim:
             self.start_auto_dim()
         if self.auto_nightmode:
