@@ -101,7 +101,7 @@ class BrightnessManager:
         self.handle_auto_dim_change()
 
     @property
-    def auto_night_mode(self):
+    def auto_nightmode(self):
         """
         Get the auto night mode setting from the config.
 
@@ -110,8 +110,8 @@ class BrightnessManager:
         """
         return self.config.get("auto_nightmode", True)
 
-    @auto_night_mode.setter
-    def auto_night_mode(self, value):
+    @auto_nightmode.setter
+    def auto_nightmode(self, value):
         """
         Set the auto night mode setting in the config.
 
@@ -374,7 +374,7 @@ class BrightnessManager:
 
     def handle_auto_night_mode_change(self):
         """Handle changes to the auto_night_mode setting."""
-        if self.auto_night_mode:
+        if self.auto_nightmode:
             self.start_auto_night_mode()
         else:
             self.stop_auto_night_mode()
@@ -430,7 +430,6 @@ class BrightnessManager:
         Stop the auto dim feature.
         """
         LOG.debug("Stopping Auto Dim")
-        self.auto_dim = False
         if self.event_scheduler.is_scheduled("ovos-shell.auto.dim.check"):
             self.event_scheduler.cancel_scheduled_event("ovos-shell.auto.dim.check")
 
@@ -509,7 +508,7 @@ class BrightnessManager:
         Args:
             message: The incoming message (optional).
         """
-        if self.auto_night_mode:
+        if self.auto_nightmode:
             date = now_local()
             if not self.event_scheduler.is_scheduled("ovos-shell.night.mode.check"):
                 self.event_scheduler.schedule_event(
@@ -522,39 +521,22 @@ class BrightnessManager:
                 )
             if self.sunset_time < date < self.sunrise_time:
                 LOG.debug("It is night time")
-                self.bus.emit(
-                    Message(
-                        "speaker.extension.display.set.auto.dim", {"auto_dim": True}
-                    )
-                    if message is None
-                    else message.forward(
-                        Message(
-                            "speaker.extension.display.set.auto.dim", {"auto_dim": True}
-                        )
-                    )
-                )
+                if not self.auto_dim:
+                    self.auto_dim = True
             else:
                 LOG.debug("It is day time")
-                self.bus.emit(
-                    Message(
-                        "speaker.extension.display.set.auto.dim", {"auto_dim": False}
-                    )
-                    if message is None
-                    else message.forward(
-                        Message(
-                            "speaker.extension.display.set.auto.dim",
-                            {"auto_dim": False},
-                        )
-                    )
-                )
+                if self.auto_dim:
+                    self.auto_dim = False
 
     def stop_auto_night_mode(self):
         """
         Stop the auto night mode feature.
         """
         LOG.debug("Stopping auto night mode")
-        self.auto_night_mode = False
-        self.event_scheduler.cancel_scheduled_event("ovos-shell.night.mode.check")
+        if self.event_scheduler.is_scheduled("ovos-shell.night.mode.check"):
+            self.event_scheduler.cancel_scheduled_event("ovos-shell.night.mode.check")
+        if self.auto_dim:
+            self.auto_dim = False
 
     def is_auto_night_mode_enabled(self, message: Optional[Message] = None):
         """
@@ -563,7 +545,7 @@ class BrightnessManager:
         Args:
             message: The incoming message (optional).
         """
-        if self.auto_night_mode:
+        if self.auto_nightmode:
             self.start_auto_night_mode(message)
         else:
             self.stop_auto_night_mode()
@@ -586,7 +568,7 @@ class BrightnessManager:
         """
         LOG.info("Resetting brightness settings to default values")
         self.auto_dim = False
-        self.auto_night_mode = True
+        self.auto_nightmode = True
         self.set_brightness(self.max_brightness)
         self.bus.emit(
             Message(
