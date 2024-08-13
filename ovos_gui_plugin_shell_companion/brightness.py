@@ -77,6 +77,8 @@ class BrightnessManager:
         self.bus.on("recognizer_loop:wakeword", self.undim_display)
         self.bus.on("recognizer_loop:record_begin", self.undim_display)
 
+        self.evaluate_initial_settings()
+
     @property
     def auto_dim(self):
         """
@@ -192,6 +194,12 @@ class BrightnessManager:
             LOG.info("Falling back to DSI interface")
             self.device_interface = "DSI"
             self.max_brightness = BrightnessConstants.MAX_BRIGHTNESS_DSI.value
+
+    def evaluate_initial_settings(self):
+        if self.auto_dim:
+            self.start_auto_dim()
+        if self.auto_nightmode:
+            self.start_auto_night_mode()
 
     def get_brightness(self):
         """
