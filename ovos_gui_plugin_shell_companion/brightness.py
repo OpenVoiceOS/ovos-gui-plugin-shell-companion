@@ -394,7 +394,15 @@ class BrightnessManager:
                 self.set_brightness(BrightnessConstants.AUTO_DIM_BRIGHTNESS.value)
 
             # Schedule the next check
-            if not self.event_scheduler.is_scheduled("ovos-shell.auto.dim.check"):
+            scheduled = False
+            try:
+                self.event_scheduler.get_scheduled_event_status(
+                    "ovos-shell.auto.dim.check"
+                )
+                scheduled = True
+            except Exception:  # This is the normal behavior if it's not found
+                pass
+            if not scheduled:
                 self.event_scheduler.schedule_event(
                     self.start_auto_dim,
                     when=now_local()
@@ -425,7 +433,13 @@ class BrightnessManager:
         """
         LOG.debug("Stopping Auto Dim")
         self.auto_dim = False
-        if self.event_scheduler.is_scheduled("ovos-shell.auto.dim.check"):
+        scheduled = False
+        try:
+            self.event_scheduler.get_scheduled_event_status("ovos-shell.auto.dim.check")
+            scheduled = True
+        except Exception:  # This is the normal behavior if it's not found
+            pass
+        if scheduled:
             self.event_scheduler.cancel_scheduled_event("ovos-shell.auto.dim.check")
 
         # Ensure brightness is set to maximum when auto dim is stopped
@@ -504,7 +518,15 @@ class BrightnessManager:
         """
         if self.auto_nightmode:
             date = now_local()
-            if not self.event_scheduler.is_scheduled("ovos-shell.night.mode.check"):
+            scheduled = False
+            try:
+                self.event_scheduler.get_scheduled_event_status(
+                    "ovos-shell.night.mode.check"
+                )
+                scheduled = True
+            except Exception:  # This is the normal behavior if it's not found
+                pass
+            if scheduled:
                 self.event_scheduler.schedule_event(
                     self.start_auto_night_mode,
                     when=date
@@ -528,7 +550,15 @@ class BrightnessManager:
         """
         LOG.debug("Stopping auto night mode")
         self.auto_nightmode = False
-        if self.event_scheduler.is_scheduled("ovos-shell.night.mode.check"):
+        scheduled = False
+        try:
+            self.event_scheduler.get_scheduled_event_status(
+                "ovos-shell.night.mode.check"
+            )
+            scheduled = True
+        except Exception:  # This is the normal behavior if it's not found
+            pass
+        if scheduled:
             self.event_scheduler.cancel_scheduled_event("ovos-shell.night.mode.check")
         if self.auto_dim:
             self.auto_dim = False
