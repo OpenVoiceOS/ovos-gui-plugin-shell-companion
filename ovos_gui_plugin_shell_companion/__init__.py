@@ -33,7 +33,15 @@ class OVOSShellCompanionExtension(GUIExtension):
     def __init__(self, config: dict, bus: MessageBusClient = None,
                  gui: GUIInterface = None,
                  preload_gui=False, permanent=True):
+        # Initialize basic attributes
+        self.uname_info = platform.uname()
+        self.local_display_config: JsonStorage = get_ovos_shell_config()
+        self.about_page_data = []
+
+        # Ensure config is properly set
         config["homescreen_supported"] = True
+
+        # Set up GUI interface
         res_dir = join(dirname(__file__), "res")
         gui = gui or GUIInterface("ovos_gui_plugin_shell_companion",
                                   bus=bus, config=Configuration(),
@@ -43,17 +51,21 @@ class OVOSShellCompanionExtension(GUIExtension):
             LOG.info(f"Setting default qt5 resource directory to: {res_dir}")
             gui.ui_directories["qt5"] = res_dir
         LOG.info("OVOS Shell: Initializing")
-        self.uname_info = platform.uname()
+        # Call superclass initializer
         super().__init__(config=config, bus=bus, gui=gui,
                          preload_gui=preload_gui, permanent=permanent)
-        self.local_display_config: JsonStorage = get_ovos_shell_config()
-        self.about_page_data = []
-        self.build_initial_about_page_data()
 
+        # Initialize additional components
+        self.build_initial_about_page_data()
         self.color_manager = ColorManager(self.bus)
         self.widgets = WidgetManager(self.bus)
         self.bright = BrightnessManager(self.bus, self.local_display_config)
         self.cui = ConfigUIManager(self.bus)
+
+        # Register bus events
+        self.register_bus_events()
+
+        LOG.info("OVOS Shell: Initialization complete")
 
     def register_bus_events(self):
         # TODO - solve this namespace mess and unify things as much as possible
