@@ -43,12 +43,12 @@ class OVOSShellCompanionExtension(GUIExtension):
             LOG.info(f"Setting default qt5 resource directory to: {res_dir}")
             gui.ui_directories["qt5"] = res_dir
         LOG.info("OVOS Shell: Initializing")
+        self.uname_info = platform.uname()
         super().__init__(config=config, bus=bus, gui=gui,
                          preload_gui=preload_gui, permanent=permanent)
         self.local_display_config: JsonStorage = get_ovos_shell_config()
         self.about_page_data = []
         self.build_initial_about_page_data()
-        self.uname_info = platform.uname()
 
         self.color_manager = ColorManager(self.bus)
         self.widgets = WidgetManager(self.bus)
