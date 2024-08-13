@@ -424,6 +424,7 @@ class BrightnessManager:
         Stop the auto dim feature.
         """
         LOG.debug("Stopping Auto Dim")
+        self.auto_dim = False
         if self.event_scheduler.is_scheduled("ovos-shell.auto.dim.check"):
             self.event_scheduler.cancel_scheduled_event("ovos-shell.auto.dim.check")
 
@@ -527,6 +528,7 @@ class BrightnessManager:
         Stop the auto night mode feature.
         """
         LOG.debug("Stopping auto night mode")
+        self.auto_nightmode = False
         if self.event_scheduler.is_scheduled("ovos-shell.night.mode.check"):
             self.event_scheduler.cancel_scheduled_event("ovos-shell.night.mode.check")
         if self.auto_dim:
