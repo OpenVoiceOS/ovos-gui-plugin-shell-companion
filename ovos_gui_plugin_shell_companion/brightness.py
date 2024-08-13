@@ -37,7 +37,7 @@ class BrightnessManager:
             *args: Variable length argument list.
             *kwargs: Arbitrary keyword arguments.
         """
-        LOG.debug("Received unexpected arguments, ignoring: {} {}".format(args, kwargs))
+        LOG.debug(f"Received unexpected arguments, ignoring: {args} {kwargs}")
         self.bus = bus
         self.config = config
         if self.config is None:
@@ -449,12 +449,12 @@ class BrightnessManager:
 
     def undim_display(self, message=None):
         """
-        Undim the display if auto dim is enabled.
+        Undim the display.
 
         Args:
             message: The incoming message (unused).
         """
-        if self.auto_dim:
+        if self.get_brightness() < self.max_brightness:
             LOG.debug("Undimming display")
             self.set_brightness(self.max_brightness)
             self.bus.emit(
@@ -465,7 +465,6 @@ class BrightnessManager:
                     )
                 )
             )
-            self.start_auto_dim()
         else:
             LOG.debug(
                 "Received request to undim display, but auto dim is not enabled. No action needed."
