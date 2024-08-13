@@ -367,17 +367,11 @@ class BrightnessManager:
 
     def handle_auto_dim_change(self):
         """Handle changes to the auto_dim setting."""
-        if self.auto_dim:
-            self.start_auto_dim()
-        else:
-            self.stop_auto_dim()
+        self.start_auto_dim()
 
     def handle_auto_night_mode_change(self):
         """Handle changes to the auto_night_mode setting."""
-        if self.auto_nightmode:
-            self.start_auto_night_mode()
-        else:
-            self.stop_auto_night_mode()
+        self.start_auto_night_mode()
 
     def start_auto_dim(self):
         """
