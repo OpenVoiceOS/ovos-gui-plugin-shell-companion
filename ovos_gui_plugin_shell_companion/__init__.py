@@ -1,6 +1,7 @@
 import platform
 
 from os.path import join, dirname
+from json_database import JsonStorage
 from ovos_bus_client.client import MessageBusClient
 from ovos_bus_client import Message
 from ovos_utils import network_utils
@@ -22,7 +23,7 @@ class OVOSShellCompanionExtension(GUIExtension):
     It handles all events sent from ovos-shell
 
     Args:
-        config: plugin configuration
+        config: plugin configuration, typically an instance of JsonStorage
         bus: MessageBus instance
         gui: GUI instance
         preload_gui (bool): load GUI skills even if gui client not connected
@@ -44,13 +45,14 @@ class OVOSShellCompanionExtension(GUIExtension):
         LOG.info("OVOS Shell: Initializing")
         super().__init__(config=config, bus=bus, gui=gui,
                          preload_gui=preload_gui, permanent=permanent)
-        self.local_display_config = get_ovos_shell_config()
+        self.local_display_config: JsonStorage = get_ovos_shell_config()
         self.about_page_data = []
         self.build_initial_about_page_data()
+        self.uname_info = platform.uname()
 
         self.color_manager = ColorManager(self.bus)
         self.widgets = WidgetManager(self.bus)
-        self.bright = BrightnessManager(self.bus)
+        self.bright = BrightnessManager(self.bus, self.local_display_config)
         self.cui = ConfigUIManager(self.bus)
 
     def register_bus_events(self):
@@ -143,12 +145,11 @@ class OVOSShellCompanionExtension(GUIExtension):
         self.gui['state'] = 'settings/display_settings'
         # wallpaper_rotation data is determined via Messagebus in Qt directly
         self.gui['display_auto_dim'] = self.local_display_config.get("auto_dim", False)
-        self.gui['display_auto_nightmode'] = self.local_display_config.get("auto_nightmode", False)
+        self.gui['display_auto_nightmode'] = self.local_display_config.get("auto_nightmode", True)
         self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
 
     def handle_device_about_page(self, message):
         # TODO: Move `system_information` generation to util method
-        uname_info = platform.uname()
         system_information = {"display_list": self.about_page_data}
         self.gui['state'] = 'settings/about_page'
         self.gui['system_info'] = system_information
@@ -161,7 +162,7 @@ class OVOSShellCompanionExtension(GUIExtension):
         self.bus.emit(Message("speaker.extension.display.auto.dim.changed"))
 
     def handle_display_auto_nightmode_config_set(self, message):
-        auto_nightmode = message.data.get("auto_nightmode", False)
+        auto_nightmode = message.data.get("auto_nightmode", True)
         self.local_display_config["auto_nightmode"] = auto_nightmode
         self.local_display_config.store()
         self.bus.emit(Message("speaker.extension.display.auto.nightmode.changed"))
@@ -181,12 +182,12 @@ class OVOSShellCompanionExtension(GUIExtension):
         self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
 
     def build_initial_about_page_data(self):
-        uname_info = platform.uname()
         try:
             from ovos_core.version import OVOS_VERSION_STR as version
         except ImportError:
             version = "unknown"
-        self.about_page_data.append({"display_key": "Kernel Version", "display_value": uname_info[2]})
+        kernel_version = self.uname_info[2] if isinstance(self.uname_info, tuple) else "unknown"
+        self.about_page_data.append({"display_key": "Kernel Version", "display_value": kernel_version})
         self.about_page_data.append({"display_key": "Core Version", "display_value": version})
         self.about_page_data.append({"display_key": "Python Version", "display_value": platform.python_version()})
         self.about_page_data.append({"display_key": "Local Address", "display_value": network_utils.get_ip()})

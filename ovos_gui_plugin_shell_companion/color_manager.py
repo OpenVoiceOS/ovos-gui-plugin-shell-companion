@@ -1,6 +1,6 @@
 import os
 import re
-from os.path import join, dirname
+from os.path import join
 
 from ovos_bus_client import Message
 from ovos_utils.log import LOG
