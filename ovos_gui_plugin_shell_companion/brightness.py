@@ -100,7 +100,7 @@ class BrightnessManager:
         if self.config.get("auto_dim") != value:
             self.config["auto_dim"] = value
             self.config.store()
-        self.handle_auto_dim_change()
+        self.start_auto_dim()
 
     @property
     def auto_nightmode(self):
@@ -123,7 +123,7 @@ class BrightnessManager:
         if self.config.get("auto_nightmode") != value:
             self.config["auto_nightmode"] = value
             self.config.store()
-            self.handle_auto_night_mode_change()
+            self.start_auto_night_mode()
 
     def discover(self):
         """
@@ -373,14 +373,6 @@ class BrightnessManager:
             )
         )
 
-    def handle_auto_dim_change(self):
-        """Handle changes to the auto_dim setting."""
-        self.start_auto_dim()
-
-    def handle_auto_night_mode_change(self):
-        """Handle changes to the auto_night_mode setting."""
-        self.start_auto_night_mode()
-
     def start_auto_dim(self):
         """
         Start the auto dim feature or adjust brightness if auto dim is disabled.
@@ -552,18 +544,6 @@ class BrightnessManager:
             self.start_auto_night_mode(message)
         else:
             self.stop_auto_night_mode()
-
-    def is_auto_dim_enabled(self, message: Optional[Message] = None):
-        """
-        Check if auto dim is enabled and start/stop it accordingly.
-
-        Args:
-            message: The incoming message (optional).
-        """
-        if self.auto_dim:
-            self.start_auto_dim()
-        else:
-            self.stop_auto_dim()
 
     def reset_to_default(self):
         """
