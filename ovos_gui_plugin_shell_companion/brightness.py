@@ -72,6 +72,8 @@ class BrightnessManager:
             "speaker.extension.display.auto.nightmode.changed",
             self.evaluate_settings,
         )
+        self.bus.on("speaker.extension.display.set.auto.dim", self.evaluate_settings)
+        self.bus.on("speaker.extension.display.set.auto.nightmode", self.evaluate_settings)
         self.bus.on("gui.page_interaction", self.undim_display)
         self.bus.on("gui.page_gained_focus", self.undim_display)
         self.bus.on("recognizer_loop:wakeword", self.undim_display)
