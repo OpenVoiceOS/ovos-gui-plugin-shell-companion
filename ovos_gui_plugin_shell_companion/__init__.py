@@ -1,19 +1,19 @@
 import platform
-
 from os.path import join, dirname
-from ovos_bus_client.client import MessageBusClient
+
 from ovos_bus_client import Message
-from ovos_utils import network_utils
 from ovos_bus_client.apis.gui import GUIInterface
-from ovos_utils.log import LOG
+from ovos_bus_client.client import MessageBusClient
+from ovos_config import LocalConf, USER_CONFIG
 from ovos_config.config import Configuration
+from ovos_plugin_manager.templates.gui import GUIExtension
+from ovos_utils import network_utils
+from ovos_utils.log import LOG
 
 from ovos_gui_plugin_shell_companion.brightness import BrightnessManager
 from ovos_gui_plugin_shell_companion.color_manager import ColorManager
-from ovos_gui_plugin_shell_companion.config import get_ovos_shell_config
 from ovos_gui_plugin_shell_companion.cui import ConfigUIManager
 from ovos_gui_plugin_shell_companion.wigets import WidgetManager
-from ovos_plugin_manager.templates.gui import GUIExtension
 
 
 class OVOSShellCompanionExtension(GUIExtension):
@@ -44,13 +44,12 @@ class OVOSShellCompanionExtension(GUIExtension):
         LOG.info("OVOS Shell: Initializing")
         super().__init__(config=config, bus=bus, gui=gui,
                          preload_gui=preload_gui, permanent=permanent)
-        self.local_display_config = get_ovos_shell_config()
         self.about_page_data = []
         self.build_initial_about_page_data()
 
         self.color_manager = ColorManager(self.bus)
         self.widgets = WidgetManager(self.bus)
-        self.bright = BrightnessManager(self.bus)
+        self.bright = BrightnessManager(self.bus, self.config)
         self.cui = ConfigUIManager(self.bus)
 
     def register_bus_events(self):
@@ -139,11 +138,11 @@ class OVOSShellCompanionExtension(GUIExtension):
         self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
 
     def handle_device_display_settings(self, message):
-        LOG.debug(f"Display settings: {self.local_display_config}")
+        LOG.debug(f"Display settings: {self.config}")
         self.gui['state'] = 'settings/display_settings'
         # wallpaper_rotation data is determined via Messagebus in Qt directly
-        self.gui['display_auto_dim'] = self.local_display_config.get("auto_dim", False)
-        self.gui['display_auto_nightmode'] = self.local_display_config.get("auto_nightmode", False)
+        self.gui['display_auto_dim'] = self.config.get("auto_dim", False)
+        self.gui['display_auto_nightmode'] = self.config.get("auto_nightmode", False)
         self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
 
     def handle_device_about_page(self, message):
@@ -154,16 +153,24 @@ class OVOSShellCompanionExtension(GUIExtension):
         self.gui['system_info'] = system_information
         self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
 
+    def _update_config(self, k, v):
+        """helper to update config permanently (on mycroft.conf)"""
+        cfg = LocalConf(USER_CONFIG)
+        if "gui" not in cfg:
+            cfg["gui"] = {}
+        if "ovos-gui-plugin-shell-companion" not in cfg:
+            cfg["gui"]["ovos-gui-plugin-shell-companion"] = {}
+        cfg["gui"]["ovos-gui-plugin-shell-companion"][k] = self.config[k] = v
+        cfg.store()
+
     def handle_display_auto_dim_config_set(self, message):
         auto_dim = message.data.get("auto_dim", False)
-        self.local_display_config["auto_dim"] = auto_dim
-        self.local_display_config.store()
+        self._update_config("auto_dim", auto_dim)
         self.bus.emit(Message("speaker.extension.display.auto.dim.changed"))
 
     def handle_display_auto_nightmode_config_set(self, message):
         auto_nightmode = message.data.get("auto_nightmode", False)
-        self.local_display_config["auto_nightmode"] = auto_nightmode
-        self.local_display_config.store()
+        self._update_config("auto_nightmode", auto_nightmode)
         self.bus.emit(Message("speaker.extension.display.auto.nightmode.changed"))
 
     def display_advanced_config_for_group(self, message=None):
