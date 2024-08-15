@@ -11,7 +11,7 @@ from ovos_utils.log import LOG
 
 from ovos_gui_plugin_shell_companion.brightness import BrightnessManager
 from ovos_gui_plugin_shell_companion.color_manager import ColorManager
-from ovos_gui_plugin_shell_companion.helpers import ConfigUIManager, update_config
+from ovos_gui_plugin_shell_companion.helpers import ConfigUIManager
 from ovos_gui_plugin_shell_companion.wigets import WidgetManager
 
 
