@@ -1,9 +1,10 @@
 import datetime
+import shutil
 import subprocess
 import threading
 import time
-import shutil
 from datetime import timedelta
+
 from astral import LocationInfo
 from astral.sun import sun
 from ovos_bus_client import Message
@@ -11,6 +12,8 @@ from ovos_config import Configuration
 from ovos_utils.events import EventSchedulerInterface
 from ovos_utils.log import LOG
 from ovos_utils.time import now_local
+
+from ovos_gui_plugin_shell_companion.helpers import update_config
 
 
 class BrightnessManager:
@@ -31,15 +34,10 @@ class BrightnessManager:
         self.sunrise_time = None
         self.get_sunset_time()
 
-        self.is_auto_dim_enabled()
-        self.is_auto_night_mode_enabled()
-
         self.discover()
 
         self.bus.on("phal.brightness.control.get", self.query_current_brightness)
         self.bus.on("phal.brightness.control.set", self.set_brightness_from_bus)
-        self.bus.on("speaker.extension.display.auto.dim.changed", self.is_auto_dim_enabled)
-        self.bus.on("speaker.extension.display.auto.nightmode.changed", self.is_auto_night_mode_enabled)
         self.bus.on("gui.page_interaction", self.undim_display)
         self.bus.on("gui.page_gained_focus", self.undim_display)
         self.bus.on("recognizer_loop:wakeword", self.undim_display)
@@ -49,15 +47,8 @@ class BrightnessManager:
     def auto_dim_enabled(self):
         return self.config.get("auto_dim", False)
 
-    #### brightness manager - TODO generic non rpi support
-    # Check if the auto dim is enabled
-    def is_auto_dim_enabled(self, message=None):
-        LOG.debug("Checking if auto dim is enabled")
-        if self.auto_dim_enabled:
-            self.start_auto_dim()
-        else:
-            self.stop_auto_dim()
-
+    ##############################################
+    # brightness manager - TODO generic non rpi support
     # Discover the brightness control device interface (HDMI / DSI) on the Raspberry PI
     def discover(self):
         try:
@@ -169,7 +160,12 @@ class BrightnessManager:
             self.set_brightness(apply_level)
 
     def start_auto_dim(self):
-        LOG.debug("Starting auto dim")
+        LOG.debug("Starting Auto Dim")
+        if self.auto_dim_enabled:
+            self.stop_auto_dim()
+        self.config["auto_dim"] = True
+        update_config("auto_dim", True)
+
         self.timer_thread = threading.Thread(target=self.auto_dim_timer)
         self.timer_thread.start()
 
@@ -187,16 +183,12 @@ class BrightnessManager:
             self.set_brightness(20)
 
     def stop_auto_dim(self):
-        LOG.debug("Stopping Auto Dim")
-        self.config["auto_dim"] = False
-        if self.timer_thread:
-            self.timer_thread.join()
-
-    def restart_auto_dim(self):
-        LOG.debug("Restarting Auto Dim")
-        self.stop_auto_dim()
-        self.config["auto_dim"] = True
-        self.start_auto_dim()
+        if self.auto_dim_enabled:
+            LOG.debug("Stopping Auto Dim")
+            self.config["auto_dim"] = False
+            update_config("auto_dim", False)
+            if self.timer_thread:
+                self.timer_thread.join()
 
     def undim_display(self, message=None):
         if self.auto_dim_enabled:
@@ -208,11 +200,11 @@ class BrightnessManager:
             self.bus.emit(
                 Message("phal.brightness.control.auto.dim.update", {"brightness": "100"}))
             self.restart_auto_dim()
-        else:
-            pass
 
-        ##### AUTO NIGHT MODE HANDLING #####
-
+    ##################################
+    # AUTO NIGHT MODE HANDLING
+    # TODO - allow to do it based on camera, reacting live to brightness,
+    #  instead of depending on sunset times
     def get_sunset_time(self, message=None):
         LOG.debug("Getting sunset time")
         now_time = now_local()
@@ -237,10 +229,20 @@ class BrightnessManager:
                                             when=now_time + timedelta(hours=24),
                                             name="ovos-shell.suntimes.check")
 
-    def start_auto_night_mode(self, message=None):
+    @property
+    def auto_night_mode_enabled(self):
+        return self.config.get("auto_nightmode", False)
+
+    def start_auto_night_mode(self):
+        LOG.debug("Starting auto night mode")
+        self.config["auto_nightmode"] = True
+        update_config("auto_nightmode", True)
+        self.handle_auto_night_mode_check()
+
+    def handle_auto_night_mode_check(self, message=None):
         if self.auto_night_mode_enabled:
             date = now_local()
-            self.event_scheduler.schedule_event(self.start_auto_night_mode,
+            self.event_scheduler.schedule_event(self.handle_auto_night_mode_check,
                                                 when=date + timedelta(hours=1),
                                                 name="ovos-shell.night.mode.check")
             if self.sunset_time < date < self.sunrise_time:
@@ -255,14 +257,5 @@ class BrightnessManager:
     def stop_auto_night_mode(self):
         LOG.debug("Stopping auto night mode")
         self.config["auto_nightmode"] = False
+        update_config("auto_nightmode", False)
         self.event_scheduler.cancel_scheduled_event("ovos-shell.night.mode.check")
-
-    @property
-    def auto_night_mode_enabled(self):
-        return self.config.get("auto_nightmode", False)
-
-    def is_auto_night_mode_enabled(self):
-        if self.auto_night_mode_enabled:
-            self.start_auto_night_mode()
-        else:
-            self.stop_auto_night_mode()

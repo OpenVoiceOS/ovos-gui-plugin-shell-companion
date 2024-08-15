@@ -4,7 +4,6 @@ from os.path import join, dirname
 from ovos_bus_client import Message
 from ovos_bus_client.apis.gui import GUIInterface
 from ovos_bus_client.client import MessageBusClient
-from ovos_config import LocalConf, USER_CONFIG
 from ovos_config.config import Configuration
 from ovos_plugin_manager.templates.gui import GUIExtension
 from ovos_utils import network_utils
@@ -12,7 +11,7 @@ from ovos_utils.log import LOG
 
 from ovos_gui_plugin_shell_companion.brightness import BrightnessManager
 from ovos_gui_plugin_shell_companion.color_manager import ColorManager
-from ovos_gui_plugin_shell_companion.cui import ConfigUIManager
+from ovos_gui_plugin_shell_companion.helpers import ConfigUIManager, update_config
 from ovos_gui_plugin_shell_companion.wigets import WidgetManager
 
 
@@ -153,25 +152,19 @@ class OVOSShellCompanionExtension(GUIExtension):
         self.gui['system_info'] = system_information
         self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
 
-    def _update_config(self, k, v):
-        """helper to update config permanently (on mycroft.conf)"""
-        cfg = LocalConf(USER_CONFIG)
-        if "gui" not in cfg:
-            cfg["gui"] = {}
-        if "ovos-gui-plugin-shell-companion" not in cfg:
-            cfg["gui"]["ovos-gui-plugin-shell-companion"] = {}
-        cfg["gui"]["ovos-gui-plugin-shell-companion"][k] = self.config[k] = v
-        cfg.store()
-
     def handle_display_auto_dim_config_set(self, message):
         auto_dim = message.data.get("auto_dim", False)
-        self._update_config("auto_dim", auto_dim)
-        self.bus.emit(Message("speaker.extension.display.auto.dim.changed"))
+        if auto_dim:
+            self.bright.start_auto_dim()
+        else:
+            self.bright.stop_auto_dim()
 
     def handle_display_auto_nightmode_config_set(self, message):
         auto_nightmode = message.data.get("auto_nightmode", False)
-        self._update_config("auto_nightmode", auto_nightmode)
-        self.bus.emit(Message("speaker.extension.display.auto.nightmode.changed"))
+        if auto_nightmode:
+            self.bright.start_auto_night_mode()
+        else:
+            self.bright.stop_auto_night_mode()
 
     def display_advanced_config_for_group(self, message=None):
         group_meta = message.data.get("settingsMetaData")

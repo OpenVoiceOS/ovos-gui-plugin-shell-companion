@@ -3,12 +3,26 @@ import os
 
 from ovos_bus_client import Message
 from ovos_config import Configuration
+from ovos_config import LocalConf, USER_CONFIG
 from ovos_config.config import update_mycroft_config
 from ovos_utils.log import LOG
 
 
+def update_config(k, v):
+    """helper to update config permanently (on mycroft.conf)"""
+    cfg = LocalConf(USER_CONFIG)
+    if "gui" not in cfg:
+        cfg["gui"] = {}
+    if "ovos-gui-plugin-shell-companion" not in cfg:
+        cfg["gui"]["ovos-gui-plugin-shell-companion"] = {}
+    if cfg["gui"]["ovos-gui-plugin-shell-companion"].get(k) != v:
+        cfg["gui"]["ovos-gui-plugin-shell-companion"][k] = v
+        cfg.store()
+
+
 class ConfigUIManager:
     """ handle UI for developer settings dropdown menu in ovos-shell """
+
     def __init__(self, bus):
         self.bus = bus
         self.settings_meta = {}
