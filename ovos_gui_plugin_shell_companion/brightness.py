@@ -419,8 +419,9 @@ class BrightnessManager:
                     "ovos-shell.auto.dim.check"
                 )
                 scheduled = True
-            except Exception:  # This is the normal behavior if it's not found
-                pass
+            except Exception as e:  # This is the normal behavior if it's not found
+                LOG.debug(e)
+                LOG.debug("Existing auto dim check event not found")
             if not scheduled:
                 self.event_scheduler.schedule_event(
                     self.evaluate_auto_dim,
@@ -442,7 +443,9 @@ class BrightnessManager:
         try:
             self.event_scheduler.get_scheduled_event_status("ovos-shell.auto.dim.check")
             scheduled = True
-        except Exception:  # This is the normal behavior if it's not found
+        except Exception as e:  # This is the normal behavior if it's not found
+            LOG.debug(e)
+            LOG.debug("Existing auto dim check event not found")
             pass
         if scheduled:
             self.event_scheduler.cancel_scheduled_event("ovos-shell.auto.dim.check")
@@ -527,8 +530,9 @@ class BrightnessManager:
             self.event_scheduler.get_scheduled_event_status(
                 "ovos-shell.night.mode.check"
             )
-        except Exception:  # This is the normal behavior if it's not found
-            pass
+        except Exception as e:  # This is the normal behavior if it's not found
+            LOG.debug(e)
+            LOG.debug("Existing night mode check event not found")
         self.event_scheduler.schedule_event(
             self.start_auto_night_mode,
             when=date
@@ -558,8 +562,9 @@ class BrightnessManager:
                 "ovos-shell.night.mode.check"
             )
             scheduled = True
-        except Exception:  # This is the normal behavior if it's not found
-            pass
+        except Exception as e:  # This is the normal behavior if it's not found
+            LOG.debug(e)
+            LOG.debug("Existing night mode check event not found")
         if scheduled:
             self.event_scheduler.cancel_scheduled_event("ovos-shell.night.mode.check")
         if self.auto_dim:
