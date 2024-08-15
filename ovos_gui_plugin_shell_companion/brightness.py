@@ -43,10 +43,6 @@ class BrightnessManager:
         self.bus.on("recognizer_loop:wakeword", self.undim_display)
         self.bus.on("recognizer_loop:record_begin", self.undim_display)
 
-    @property
-    def auto_dim_enabled(self):
-        return self.config.get("auto_dim", False)
-
     ##############################################
     # brightness manager - TODO generic non rpi support
     # Discover the brightness control device interface (HDMI / DSI) on the Raspberry PI
@@ -159,6 +155,10 @@ class BrightnessManager:
 
             self.set_brightness(apply_level)
 
+    @property
+    def auto_dim_enabled(self):
+        return self.config.get("auto_dim", False)
+
     def start_auto_dim(self):
         LOG.debug("Starting Auto Dim")
         if self.auto_dim_enabled:
@@ -199,7 +199,7 @@ class BrightnessManager:
                 self.set_brightness(255)
             self.bus.emit(
                 Message("phal.brightness.control.auto.dim.update", {"brightness": "100"}))
-            self.restart_auto_dim()
+            self.start_auto_dim()
 
     ##################################
     # AUTO NIGHT MODE HANDLING
