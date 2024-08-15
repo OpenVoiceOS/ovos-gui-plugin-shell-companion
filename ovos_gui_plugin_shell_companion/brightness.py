@@ -27,6 +27,8 @@ class BrightnessConstants(Enum):
 
 
 class BrightnessManager:
+    """Manage brightness settings, primarily for the Mycroft Mark 2 device, but can be used with
+    other Raspberry Pi devices with screens."""
     def __init__(self, bus, config: Optional[JsonStorage] = None, *args, **kwargs):
         """
         Initialize the BrightnessManager.
@@ -42,7 +44,7 @@ class BrightnessManager:
         self.config = config
         if self.config is None:
             LOG.warning(
-                "No config provided, using default config but it will not be saved"
+                "No JsonStorage config provided, using default config but it will not be saved"
             )
             self.config = {"auto_dim": False, "auto_nightmode": True}
         self.event_scheduler = EventSchedulerInterface()
@@ -61,8 +63,6 @@ class BrightnessManager:
         self.sunrise_time = None
         self.get_sunset_time()
 
-        self.discover()
-
         self.bus.on("phal.brightness.control.get", self.query_current_brightness)
         self.bus.on("phal.brightness.control.set", self.set_brightness_from_bus)
         self.bus.on(
@@ -77,6 +77,7 @@ class BrightnessManager:
         self.bus.on("recognizer_loop:wakeword", self.undim_display)
         self.bus.on("recognizer_loop:record_begin", self.undim_display)
 
+        self.discover_brightness_control_interface()
         self.evaluate_settings()
 
     @property
@@ -100,7 +101,7 @@ class BrightnessManager:
         if self.config.get("auto_dim") != value:
             self.config["auto_dim"] = value
             self.config.store()
-        self.start_auto_dim()
+        self.evaluate_auto_dim()
 
     @property
     def auto_nightmode(self):
@@ -125,7 +126,7 @@ class BrightnessManager:
             self.config.store()
             self.start_auto_night_mode()
 
-    def discover(self):
+    def discover_brightness_control_interface(self):
         """
         Discover the brightness control device interface (HDMI / DSI) on the Raspberry PI.
         """
@@ -196,10 +197,10 @@ class BrightnessManager:
             self.max_brightness = BrightnessConstants.MAX_BRIGHTNESS_DSI.value
 
     def evaluate_settings(self):
-        if self.auto_dim:
-            self.start_auto_dim()
         if self.auto_nightmode:
             self.start_auto_night_mode()
+        if self.auto_dim:
+            self.evaluate_auto_dim()
 
     def get_brightness(self):
         """
@@ -373,18 +374,18 @@ class BrightnessManager:
             )
         )
 
-    def start_auto_dim(self):
+    def evaluate_auto_dim(self, message: Optional[Message] = None):
         """
         Start the auto dim feature or adjust brightness if auto dim is disabled.
         """
         current_brightness = self.get_brightness()
         if current_brightness is None:
-            LOG.error("Failed to get current brightness. Cannot start auto dim.")
+            LOG.error("Failed to get current brightness. Cannot evaluate auto dim.")
             return
 
-        if self.auto_dim:
+        if self.auto_dim and message is not None:  # Only dim after the first check
             if current_brightness > BrightnessConstants.AUTO_DIM_BRIGHTNESS.value:
-                LOG.debug("Starting auto dim")
+                LOG.debug("Dimming screen")
                 self.bus.emit(
                     Message(
                         "phal.brightness.control.auto.dim.update",
@@ -392,25 +393,7 @@ class BrightnessManager:
                     )
                 )
                 self.set_brightness(BrightnessConstants.AUTO_DIM_BRIGHTNESS.value)
-
-            # Schedule the next check
-            scheduled = False
-            try:
-                self.event_scheduler.get_scheduled_event_status(
-                    "ovos-shell.auto.dim.check"
-                )
-                scheduled = True
-            except Exception:  # This is the normal behavior if it's not found
-                pass
-            if not scheduled:
-                self.event_scheduler.schedule_event(
-                    self.start_auto_dim,
-                    when=now_local()
-                    + timedelta(
-                        minutes=BrightnessConstants.AUTO_DIM_CHECK_INTERVAL.value
-                    ),
-                    name="ovos-shell.auto.dim.check",
-                )
+            # Do nothing if we're already at the desired dimness level
         else:
             # If auto_dim is disabled but brightness is lower than max, adjust it
             if current_brightness < self.max_brightness:
@@ -426,6 +409,26 @@ class BrightnessManager:
                 LOG.debug(
                     "Auto dim is disabled and brightness is already at maximum. No action needed."
                 )
+        if self.auto_dim:
+            # Schedule the next check
+            scheduled = False
+            try:
+                self.event_scheduler.get_scheduled_event_status(
+                    "ovos-shell.auto.dim.check"
+                )
+                scheduled = True
+            except Exception:  # This is the normal behavior if it's not found
+                pass
+            if not scheduled:
+                self.event_scheduler.schedule_event(
+                    self.evaluate_auto_dim,
+                    when=now_local()
+                    + timedelta(
+                        minutes=BrightnessConstants.AUTO_DIM_CHECK_INTERVAL.value
+                    ),
+                    name="ovos-shell.auto.dim.check",
+                )
+
 
     def stop_auto_dim(self):
         """
@@ -458,7 +461,7 @@ class BrightnessManager:
         Undim the display.
 
         Args:
-            message: The incoming message (unused).
+            message: The incoming message, forwarded to update the dimness as needed.
         """
         if self.get_brightness() < self.max_brightness:
             LOG.debug("Undimming display")
@@ -473,7 +476,7 @@ class BrightnessManager:
             )
         else:
             LOG.debug(
-                "Received request to undim display, but auto dim is not enabled. No action needed."
+                "Received request to undim display, but already at max brightness."
             )
 
     def get_sunset_time(self, message=None):
@@ -516,33 +519,30 @@ class BrightnessManager:
         Args:
             message: The incoming message (optional).
         """
-        if self.auto_nightmode:
-            date = now_local()
-            scheduled = False
-            try:
-                self.event_scheduler.get_scheduled_event_status(
-                    "ovos-shell.night.mode.check"
-                )
-                scheduled = True
-            except Exception:  # This is the normal behavior if it's not found
-                pass
-            if scheduled:
-                self.event_scheduler.schedule_event(
-                    self.start_auto_night_mode,
-                    when=date
-                    + timedelta(
-                        hours=BrightnessConstants.AUTO_NIGHT_MODE_CHECK_INTERVAL.value
-                    ),
-                    name="ovos-shell.night.mode.check",
-                )
-            if self.sunset_time < date < self.sunrise_time:
-                LOG.debug("It is night time")
-                if not self.auto_dim:
-                    self.auto_dim = True
-            else:
-                LOG.debug("It is day time")
-                if self.auto_dim:
-                    self.auto_dim = False
+        self.auto_nightmode = True
+        date = now_local()
+        try:
+            self.event_scheduler.get_scheduled_event_status(
+                "ovos-shell.night.mode.check"
+            )
+        except Exception:  # This is the normal behavior if it's not found
+            pass
+        self.event_scheduler.schedule_event(
+            self.start_auto_night_mode,
+            when=date
+            + timedelta(
+                hours=BrightnessConstants.AUTO_NIGHT_MODE_CHECK_INTERVAL.value
+            ),
+            name="ovos-shell.night.mode.check",
+        )
+        if self.sunset_time < date < self.sunrise_time:
+            LOG.debug("It is night time, setting auto_dim")
+            if not self.auto_dim:
+                self.auto_dim = True
+        else:
+            LOG.debug("It is day time, disabling auto_dim")
+            if self.auto_dim:
+                self.auto_dim = False
 
     def stop_auto_night_mode(self):
         """
