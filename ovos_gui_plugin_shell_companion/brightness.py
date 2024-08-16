@@ -401,7 +401,7 @@ def get_suntimes() -> Tuple[datetime.datetime, datetime.datetime]:
     if reference > sunrise_time:  # get next sunrise, today's already happened
         sunrise_time = s2["sunrise"]
     if reference > sunset_time:  # get next sunset, today's already happened
-        sunrise_time = s2["sunrise"]
+        sunset_time = s2["sunset"]
     return sunrise_time, sunset_time
 
 
