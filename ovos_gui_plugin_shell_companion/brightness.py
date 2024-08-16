@@ -240,18 +240,22 @@ class BrightnessManager:
 
     def handle_auto_night_mode_check(self, message=None):
         if self.auto_night_mode_enabled:
+            # TODO - we have exact sunset/sunrise times... why are we doing a periodic check?
+            #  just schedule to the exact datetime right away....
             date = now_local()
             self.event_scheduler.schedule_event(self.handle_auto_night_mode_check,
                                                 when=date + timedelta(hours=1),
                                                 name="ovos-shell.night.mode.check")
             if self.sunset_time < date < self.sunrise_time:
                 LOG.debug("It is night time")
+                # show night clock in homescreen
                 self.bus.emit(Message("phal.brightness.control.auto.night.mode.enabled"))
+                # equivalent to
+                # self.bus.emit(Message("ovos.homescreen.main_view.current_index.set", {"current_index": 0}))
             else:
                 LOG.debug("It is day time")
-                # TODO - implement this message in shell / check if it exists
-                # i just made it up without checking
-                self.bus.emit(Message("phal.brightness.control.auto.night.mode.disabled"))
+                # go back to main homescreen page
+                self.bus.emit(Message("ovos.homescreen.main_view.current_index.set", {"current_index": 1}))
 
     def stop_auto_night_mode(self):
         LOG.debug("Stopping auto night mode")
