@@ -40,7 +40,7 @@ class BrightnessManager:
         self._brightness_level: int = self.default_brightness
         self.sunset_time: Optional[datetime.datetime] = None
         self.sunrise_time: Optional[datetime.datetime] = None
-        self.get_sunset_time()
+        self.sync_sunset_times()
 
         self.discover()
 
@@ -284,14 +284,14 @@ class BrightnessManager:
     # AUTO NIGHT MODE HANDLING
     # TODO - allow to do it based on camera, reacting live to brightness,
     #  instead of depending on sunset times
-    def get_sunset_time(self, message: Optional[Message] = None):
+    def sync_sunset_times(self):
         """
         Get the sunset and sunrise times based on the configured location.
 
         Args:
             message: Optional message received from the bus.
         """
-        LOG.debug("Getting sunset time")
+        LOG.debug("Calculating sunrise/sunset times")
         now_time = now_local()
         # TODO - update if location changes in mycroft.conf
         try:
@@ -303,11 +303,6 @@ class BrightnessManager:
                                                  day=now_time.day, hour=22,
                                                  tzinfo=now_time.tzinfo)
             self.sunrise_time = self.sunset_time + timedelta(hours=8)
-
-        # check sunset times again in 12 hours
-        self.event_scheduler.schedule_event(self.get_sunset_time,
-                                            when=now_time + timedelta(hours=12),
-                                            name="ovos-shell.suntimes.check")
 
     @property
     def auto_night_mode_enabled(self) -> bool:
@@ -321,6 +316,7 @@ class BrightnessManager:
 
     @property
     def is_night(self) -> bool:
+        self.sync_sunset_times()
         return self.sunset_time <= now_local() < self.sunrise_time
 
     def start_auto_night_mode(self):
@@ -343,6 +339,7 @@ class BrightnessManager:
         Args:
             message: Optional message received from the bus.
         """
+        self.sync_sunset_times()
         if self.auto_night_mode_enabled:
             LOG.debug("It is daytime")
             self.default_brightness = self.config.get("default_brightness", 100)
@@ -366,6 +363,7 @@ class BrightnessManager:
         Args:
             message: Optional message received from the bus.
         """
+        self.sync_sunset_times()
         if self.auto_night_mode_enabled:
             LOG.debug("It is nighttime")
             self.default_brightness = self.config.get("night_default_brightness", 70)
