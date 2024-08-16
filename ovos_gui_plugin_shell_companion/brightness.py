@@ -224,8 +224,9 @@ class BrightnessManager:
         self.config["auto_dim"] = True
         update_config("auto_dim", True)
         # dim screen in 60 seconds
+        seconds = self.config.get("auto_dim_seconds", 60)
         self.event_scheduler.schedule_event(self.handle_dim_screen,
-                                            when=now_local() + timedelta(seconds=60),  # TODO - seconds from config
+                                            when=now_local() + timedelta(seconds=seconds),
                                             name="ovos-shell.autodim")
 
     def handle_dim_screen(self, message: Optional[Message] = None):
@@ -237,17 +238,20 @@ class BrightnessManager:
         """
         if self.auto_dim_enabled:
             LOG.debug("Auto-dim: Lowering brightness")
+            lowb = self.config.get("low_brightness", 20)
             self.bus.emit(Message("phal.brightness.control.auto.dim.update",
-                                  {"brightness": 20}))
-            self.set_brightness(20)  # TODO - value from enum
+                                  {"brightness": lowb}))
+            self.set_brightness(lowb)
 
     def _restore(self):
         """
         Restore the brightness level if auto-dim had reduced it.
         """
-        if self._brightness_level == 20:
+        if self._brightness_level < self.default_brightness:
             LOG.debug("Auto-dim: Restoring brightness")
             self.set_brightness(self.default_brightness)
+            self.bus.emit(Message("phal.brightness.control.auto.dim.update",
+                                  {"brightness": self.default_brightness}))
 
     def stop_auto_dim(self):
         """
@@ -321,6 +325,10 @@ class BrightnessManager:
         """
         return self.config.get("auto_nightmode", False)
 
+    @property
+    def is_night(self) -> bool:
+        return self.sunset_time <= now_local() < self.sunrise_time
+
     def start_auto_night_mode(self):
         """
         Start the auto night mode functionality.
@@ -329,8 +337,7 @@ class BrightnessManager:
         self.config["auto_nightmode"] = True
         update_config("auto_nightmode", True)
 
-        now = now_local()
-        if self.sunset_time < now < self.sunrise_time:
+        if self.is_night:
             self.handle_sunset()
         else:
             self.handle_sunrise()

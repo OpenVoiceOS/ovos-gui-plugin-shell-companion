@@ -15,6 +15,8 @@ provides various bus APIs that integrate with ovos-shell
   "gui": {
      "ovos-gui-plugin-shell-companion": {
        "default_brightness": 100,
+       "low_brightness": 20,
+       "auto_dim_seconds": 60,
        "auto_dim": false,
        "auto_nightmode": false
      }
