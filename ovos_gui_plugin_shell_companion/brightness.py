@@ -148,12 +148,7 @@ class BrightnessManager:
         Args:
             message: The message received from the bus.
         """
-        current_brightness = self.get_brightness()
-        if self.device_interface == "HDMI":
-            self.bus.emit(message.response(data={"brightness": current_brightness}))
-        elif self.device_interface == "DSI":
-            brightness_percentage = int((current_brightness / 255) * 100)
-            self.bus.emit(message.response(data={"brightness": brightness_percentage}))
+        self.bus.emit(message.response(data={"brightness": self.get_brightness()}))
 
     # Set the brightness level
     def set_brightness(self, level: int):
