@@ -117,7 +117,7 @@ class BrightnessManager:
         """
         if self.device_interface is None:
             LOG.error("brightness control interface not available, can not read brightness level")
-            return 100
+            return self._brightness_level
 
         LOG.info("Getting current brightness level")
         if self.device_interface == "HDMI":
@@ -127,19 +127,17 @@ class BrightnessManager:
             )
             for line in proc_fetch_vcp.stdout:
                 if "current value" in line.decode("utf-8"):
-                    brightness_level = line.decode(
-                        "utf-8").split("current value = ")[1].split(",")[0].strip()
+                    brightness_level = line.decode("utf-8").split("current value = ")[1].split(",")[0].strip()
                     self._brightness_level = int(brightness_level)
-
-        if self.device_interface == "DSI":
+        elif self.device_interface == "DSI":
             proc_fetch_vcp = subprocess.Popen(
                 ["cat", "/sys/class/backlight/rpi_backlight/actual_brightness"], stdout=subprocess.PIPE
             )
             for line in proc_fetch_vcp.stdout:
-                brightness_level = line.decode("utf-8").strip()
-                self._brightness_level = int(brightness_level) * 100 / 255 # convert from 0-255 to 0-100 range
+                brightness_level = int(line.decode("utf-8").strip())
+                self._brightness_level = int(brightness_level * 100 / 255) # convert from 0-255 to 0-100 range
 
-        return int(self._brightness_level)
+        return self._brightness_level
 
     def handle_get_brightness(self, message: Message):
         """
