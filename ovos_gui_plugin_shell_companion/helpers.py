@@ -13,7 +13,7 @@ def update_config(k, v):
     cfg = LocalConf(USER_CONFIG)
     if "gui" not in cfg:
         cfg["gui"] = {}
-    if "ovos-gui-plugin-shell-companion" not in cfg:
+    if "ovos-gui-plugin-shell-companion" not in cfg["gui"]:
         cfg["gui"]["ovos-gui-plugin-shell-companion"] = {}
     if cfg["gui"]["ovos-gui-plugin-shell-companion"].get(k) != v:
         cfg["gui"]["ovos-gui-plugin-shell-companion"][k] = v
