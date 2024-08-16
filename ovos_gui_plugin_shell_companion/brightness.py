@@ -221,6 +221,13 @@ class BrightnessManager:
             self.config["auto_dim"] = True
             update_config("auto_dim", True)
 
+        # cancel any previous autodim event
+        try:
+            time_left = self.event_scheduler.get_scheduled_event_status("ovos-shell.autodim")
+            self.event_scheduler.cancel_scheduled_event("ovos-shell.autodim")
+        except:
+            pass  # throws exception if event not registered
+
         # dim screen in 60 seconds
         seconds = self.config.get("auto_dim_seconds", 60)
         self.event_scheduler.schedule_event(self.handle_dim_screen,
@@ -263,7 +270,11 @@ class BrightnessManager:
             self.config["auto_dim"] = False
             update_config("auto_dim", False)
             # cancel the next unfired dim event
-            self.event_scheduler.cancel_scheduled_event("ovos-shell.autodim")
+            try:
+                time_left = self.event_scheduler.get_scheduled_event_status("ovos-shell.autodim")
+                self.event_scheduler.cancel_scheduled_event("ovos-shell.autodim")
+            except:
+                pass  # throws exception if event not registered
             self._restore()
 
     def handle_undim_screen(self, message: Optional[Message] = None):
@@ -353,7 +364,11 @@ class BrightnessManager:
 
             if not self.auto_dim_enabled:
                 # cancel the next unfired dim event
-                self.event_scheduler.cancel_scheduled_event("ovos-shell.autodim")
+                try:
+                    time_left = self.event_scheduler.get_scheduled_event_status("ovos-shell.autodim")
+                    self.event_scheduler.cancel_scheduled_event("ovos-shell.autodim")
+                except:
+                    pass  # throws exception if event not registered
                 self._restore()
 
     def handle_sunset(self, message: Optional[Message] = None):
