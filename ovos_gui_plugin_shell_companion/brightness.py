@@ -213,16 +213,20 @@ class BrightnessManager:
             return False
         return self.config.get("auto_dim", True)
 
-    def start_auto_dim(self):
+    def start_auto_dim(self, nightmode:bool = False):
         """
         Start the auto-dim functionality.
         """
         if self.device_interface is None:
             LOG.error("brightness control interface not available, auto-dim functionality forcefully disabled")
             return
-        LOG.debug("Enabling Auto Dim")
-        self.config["auto_dim"] = True
-        update_config("auto_dim", True)
+        if nightmode:
+            LOG.info("Nightmode: Auto Dim enabled until sunrise")
+        else:
+            LOG.info("Enabling Auto Dim")
+            self.config["auto_dim"] = True
+            update_config("auto_dim", True)
+
         # dim screen in 60 seconds
         seconds = self.config.get("auto_dim_seconds", 60)
         self.event_scheduler.schedule_event(self.handle_dim_screen,
@@ -359,6 +363,11 @@ class BrightnessManager:
                                                 when=self.sunset_time,
                                                 name="ovos-shell.sunset")
 
+            if not self.auto_dim_enabled:
+                # cancel the next unfired dim event
+                self.event_scheduler.cancel_scheduled_event("ovos-shell.autodim")
+                self._restore()
+
     def handle_sunset(self, message: Optional[Message] = None):
         """
         Handle the sunset event for auto night mode.
@@ -368,7 +377,7 @@ class BrightnessManager:
         """
         if self.auto_night_mode_enabled:
             LOG.debug("It is nighttime")
-            self.default_brightness = self.config.get("default_brightness", 100) * 0.8
+            self.default_brightness = self.config.get("night_default_brightness", 70)
             # show night clock in homescreen
             self.bus.emit(Message("phal.brightness.control.auto.night.mode.enabled"))
             # equivalent to
@@ -377,6 +386,8 @@ class BrightnessManager:
             self.event_scheduler.schedule_event(self.handle_sunrise,
                                                 when=self.sunrise_time,
                                                 name="ovos-shell.sunrise")
+            if not self.auto_dim_enabled:
+                self.start_auto_dim(nightmode=True)
 
     def stop_auto_night_mode(self):
         """
