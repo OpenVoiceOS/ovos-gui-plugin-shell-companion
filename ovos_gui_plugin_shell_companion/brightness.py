@@ -34,8 +34,10 @@ class BrightnessManager:
         self.ddcutil = shutil.which("ddcutil")
         self.ddcutil_detected_bus = None
         self.ddcutil_brightness_code = None
+        self.device_interface = None
 
-        self._brightness_level: int = 100
+        self.default_brightness = self.config.get("default_brightness", 100)
+        self._brightness_level: int = self.default_brightness
         self.sunset_time: Optional[datetime.datetime] = None
         self.sunrise_time: Optional[datetime.datetime] = None
         self.get_sunset_time()
@@ -77,8 +79,7 @@ class BrightnessManager:
 
                 ddcutil_detected_output = proc_detect.stdout.read().decode("utf-8")
                 if "I2C bus:" in ddcutil_detected_output:
-                    bus_code = ddcutil_detected_output.split(
-                        "I2C bus: ")[1].strip().split("\n")[0]
+                    bus_code = ddcutil_detected_output.split("I2C bus: ")[1].strip().split("\n")[0]
                     self.ddcutil_detected_bus = bus_code.split("-")[1].strip()
                 else:
                     self.ddcutil_detected_bus = None
@@ -91,12 +92,10 @@ class BrightnessManager:
                     # check the vcp output for the Brightness string and get its VCP code
                     for line in proc_fetch_vcp.stdout:
                         if "Brightness" in line.decode("utf-8"):
-                            self.ddcutil_brightness_code = line.decode(
-                                "utf-8").split(" ")[2].strip()
+                            self.ddcutil_brightness_code = line.decode("utf-8").split(" ")[2].strip()
         except Exception as e:
             LOG.error(e)
-            LOG.info("Falling back to DSI interface")
-            self.device_interface = "DSI"
+            LOG.error("Brightness control is unavailable, no DSI or HDMI screen detected")
 
     # Get the current brightness level
     def get_brightness(self) -> int:
@@ -106,6 +105,10 @@ class BrightnessManager:
         Returns:
             int: The current brightness level.
         """
+        if self.device_interface is None:
+            LOG.error("brightness control interface not available, can not read brightness level")
+            return 100
+
         LOG.info("Getting current brightness level")
         if self.device_interface == "HDMI":
             proc_fetch_vcp = subprocess.Popen(
@@ -123,6 +126,7 @@ class BrightnessManager:
                 ["cat", "/sys/class/backlight/rpi_backlight/actual_brightness"], stdout=subprocess.PIPE
             )
             for line in proc_fetch_vcp.stdout:
+                # TODO - is this 0-100 or 0-255 range ?
                 brightness_level = line.decode("utf-8").strip()
                 self._brightness_level = int(brightness_level)
 
@@ -150,6 +154,9 @@ class BrightnessManager:
         Args:
             level: Brightness level to set.
         """
+        if self.device_interface is None:
+            LOG.error("brightness control interface not available, can not change brightness")
+            return
         LOG.debug("Setting brightness level")
         if self.device_interface == "HDMI":
             subprocess.Popen(
@@ -157,6 +164,7 @@ class BrightnessManager:
                  "--bus", self.ddcutil_detected_bus, str(level)]
             )
         elif self.device_interface == "DSI":
+            level = level * 255 / 100 # DSI goes from 0 to 255, HDMI from o to 100
             subprocess.call(
                 f"echo {level} > /sys/class/backlight/rpi_backlight/brightness", shell=True
             )
@@ -174,27 +182,16 @@ class BrightnessManager:
         LOG.debug("Setting brightness level from bus")
         level = message.data.get("brightness", "")
 
-        if self.device_interface == "HDMI":
-            percent_level = 100 * float(level)
-            if float(level) < 0:
-                apply_level = 0
-            elif float(level) > 100:
-                apply_level = 100
-            else:
-                apply_level = round(percent_level / 10) * 10
+        percent_level = 100 * float(level)
+        if float(level) < 0:
+            apply_level = 0
+        elif float(level) > 100:
+            apply_level = 100
+        else:
+            apply_level = round(percent_level / 10) * 10
 
-            self.set_brightness(apply_level)
+        self.set_brightness(apply_level)
 
-        if self.device_interface == "DSI":
-            percent_level = 255 * float(level)
-            if float(level) < 0:
-                apply_level = 0
-            elif float(level) > 255:
-                apply_level = 255
-            else:
-                apply_level = round(percent_level / 10) * 10
-
-            self.set_brightness(apply_level)
 
     @property
     def auto_dim_enabled(self) -> bool:
@@ -204,12 +201,17 @@ class BrightnessManager:
         Returns:
             bool: True if auto-dim is enabled, False otherwise.
         """
+        if self.device_interface is None:
+            return False
         return self.config.get("auto_dim", False)
 
     def start_auto_dim(self):
         """
         Start the auto-dim functionality.
         """
+        if self.device_interface is None:
+            LOG.error("brightness control interface not available, auto-dim functionality forcefully disabled")
+            return
         LOG.debug("Enabling Auto Dim")
         self.config["auto_dim"] = True
         update_config("auto_dim", True)
@@ -237,10 +239,7 @@ class BrightnessManager:
         """
         if self._brightness_level == 20:
             LOG.debug("Auto-dim: Restoring brightness")
-            if self.device_interface == "HDMI":
-                self.set_brightness(100)  # TODO - value from enum
-            if self.device_interface == "DSI":
-                self.set_brightness(255)  # TODO - value from enum
+            self.set_brightness(self.default_brightness)
 
     def stop_auto_dim(self):
         """
@@ -283,6 +282,7 @@ class BrightnessManager:
         now_time = now_local()
         # TODO - update if location changes in mycroft.conf
         try:
+            # TODO - better way to get sunset/sunrise....
             location = Configuration()["location"]
             lat = location["coordinate"]["latitude"]
             lon = location["coordinate"]["longitude"]
@@ -336,6 +336,7 @@ class BrightnessManager:
         """
         if self.auto_night_mode_enabled:
             LOG.debug("It is daytime")
+            self.default_brightness = self.config.get("default_brightness", 100)
             self.bus.emit(Message("ovos.homescreen.main_view.current_index.set",
                                   {"current_index": 1}))
 
@@ -352,6 +353,7 @@ class BrightnessManager:
         """
         if self.auto_night_mode_enabled:
             LOG.debug("It is nighttime")
+            self.default_brightness = self.config.get("default_brightness", 100) * 0.8
             # show night clock in homescreen
             self.bus.emit(Message("phal.brightness.control.auto.night.mode.enabled"))
             # equivalent to

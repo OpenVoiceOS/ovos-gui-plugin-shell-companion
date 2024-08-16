@@ -14,6 +14,7 @@ provides various bus APIs that integrate with ovos-shell
 {
   "gui": {
      "ovos-gui-plugin-shell-companion": {
+       "default_brightness": 100,
        "auto_dim": false,
        "auto_nightmode": false
      }
@@ -29,11 +30,11 @@ autodim will lower the screen brightness after 60 seconds of inactivity, until t
 
 nightmode will perform actions based on sunset/sunrise times
 
-currently only the homescreen changes to a simple clock with white text on black background
+- the homescreen changes to a simple clock with white text on black background
+- default brightness is reduced by 20%
 
 TODO, spec nighttime actions:
 - lower volume
-- set max brightness
 - enable autodim
 
 ## DEPRECATION WARNING
