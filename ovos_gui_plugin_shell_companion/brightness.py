@@ -38,7 +38,7 @@ class BrightnessManager:
 
         self.default_brightness = self.config.get("default_brightness", 100)
         self._brightness_level: int = self.default_brightness
-        self.sunrise_time, self.sunset_time = self.get_suntimes()
+        self.sunrise_time, self.sunset_time = None, None
 
         self.discover()
 
@@ -396,8 +396,8 @@ class BrightnessManager:
         if reference > sunset_time:  # get next sunset, today's already happened
             sunset_time = s2["sunset"]
 
-        if self.sunrise_time != sunrise_time:
+        if self.sunrise_time is None or self.sunrise_time != sunrise_time:
             LOG.info(f"Sunrise time: {sunrise_time}")
-        if self.sunset_time != sunset_time:
+        if self.sunset_time is None or self.sunset_time != sunset_time:
             LOG.info(f"Sunset time: {sunset_time}")
         return sunrise_time, sunset_time
