@@ -38,7 +38,7 @@ class BrightnessManager:
 
         self.default_brightness = self.config.get("default_brightness", 100)
         self._brightness_level: int = self.default_brightness
-        self.sunrise_time, self.sunset_time = get_suntimes()
+        self.sunrise_time, self.sunset_time = self.get_suntimes()
 
         self.discover()
 
@@ -158,6 +158,9 @@ class BrightnessManager:
             LOG.error("brightness control interface not available, can not change brightness")
             return
         level = int(level)
+        if level == self._brightness_level:
+            return  # avoid log spam
+
         LOG.debug(f"Setting brightness level: {level}")
         if self.device_interface == "HDMI":
             subprocess.Popen(
@@ -172,6 +175,8 @@ class BrightnessManager:
 
         LOG.info(f"Brightness level set to {level}")
         self._brightness_level = level
+        self.bus.emit(Message("phal.brightness.control.auto.dim.update",
+                              {"brightness": level}))
 
     def handle_set_brightness(self, message: Message):
         """
@@ -236,11 +241,10 @@ class BrightnessManager:
             message: Optional message received from the bus.
         """
         if self.auto_dim_enabled:
-            LOG.debug("Auto-dim: Lowering brightness")
             lowb = self.config.get("low_brightness", 20)
-            self.bus.emit(Message("phal.brightness.control.auto.dim.update",
-                                  {"brightness": lowb}))
-            self.set_brightness(lowb)
+            if self._brightness_level != lowb:
+                LOG.debug("Auto-dim: Lowering brightness")
+                self.set_brightness(lowb)
             if self.auto_night_mode_enabled and self.is_night:
                 # show night clock in homescreen
                 self.bus.emit(Message("phal.brightness.control.auto.night.mode.enabled"))
@@ -252,8 +256,6 @@ class BrightnessManager:
         if self._brightness_level < self.default_brightness:
             LOG.debug("Auto-dim: Restoring brightness")
             self.set_brightness(self.default_brightness)
-            self.bus.emit(Message("phal.brightness.control.auto.dim.update",
-                                  {"brightness": self.default_brightness}))
 
     def stop_auto_dim(self):
         """
@@ -305,7 +307,7 @@ class BrightnessManager:
 
     @property
     def is_night(self) -> bool:
-        self.sunrise_time, self.sunset_time = get_suntimes()  # sync
+        self.sunrise_time, self.sunset_time = self.get_suntimes()  # sync
         return self.sunset_time <= now_local() < self.sunrise_time
 
     def start_auto_night_mode(self):
@@ -328,7 +330,7 @@ class BrightnessManager:
         Args:
             message: Optional message received from the bus.
         """
-        self.sunrise_time, self.sunset_time = get_suntimes()  # sync
+        self.sunrise_time, self.sunset_time = self.get_suntimes()  # sync
         if self.auto_night_mode_enabled:
             LOG.debug("It is daytime")
             self.default_brightness = self.config.get("default_brightness", 100)
@@ -352,7 +354,7 @@ class BrightnessManager:
         Args:
             message: Optional message received from the bus.
         """
-        self.sunrise_time, self.sunset_time = get_suntimes()  # sync
+        self.sunrise_time, self.sunset_time = self.get_suntimes()  # sync
         if self.auto_night_mode_enabled:
             LOG.debug("It is nighttime")
             self.default_brightness = self.config.get("night_default_brightness", 70)
@@ -376,30 +378,26 @@ class BrightnessManager:
         self.config["auto_nightmode"] = False
         update_config("auto_nightmode", False)
 
+    def get_suntimes(self) -> Tuple[datetime.datetime, datetime.datetime]:
+        location = Configuration()["location"]
+        lat = location["coordinate"]["latitude"]
+        lon = location["coordinate"]["longitude"]
+        tz = location["timezone"]["code"]
+        city = LocationInfo("Some city", "Some location", tz, lat, lon)
 
-def get_suntimes() -> Tuple[datetime.datetime, datetime.datetime]:
-    location = Configuration()["location"]
-    lat = location["coordinate"]["latitude"]
-    lon = location["coordinate"]["longitude"]
-    tz = location["timezone"]["code"]
-    city = LocationInfo("Some city", "Some location", tz, lat, lon)
+        reference = now_local()  # now_local() is tz aware
 
-    reference = now_local()  # now_local() is tz aware
+        s = sun(city.observer, date=reference)
+        s2 = sun(city.observer, date=reference + timedelta(days=1))
+        sunset_time = s["sunset"]
+        sunrise_time = s["sunrise"]
+        if reference > sunrise_time:  # get next sunrise, today's already happened
+            sunrise_time = s2["sunrise"]
+        if reference > sunset_time:  # get next sunset, today's already happened
+            sunset_time = s2["sunset"]
 
-    s = sun(city.observer, date=reference)
-    s2 = sun(city.observer, date=reference + timedelta(days=1))
-    sunset_time = s["sunset"]
-    sunrise_time = s["sunrise"]
-    if reference > sunrise_time:  # get next sunrise, today's already happened
-        sunrise_time = s2["sunrise"]
-    if reference > sunset_time:  # get next sunset, today's already happened
-        sunset_time = s2["sunset"]
-    LOG.debug(f"Sunrise time: {sunrise_time}")
-    LOG.debug(f"Sunset time: {sunset_time}")
-    return sunrise_time, sunset_time
-
-
-if __name__ == "__main__":
-    sunrise_time, sunset_time = get_suntimes()
-    print(sunset_time)  # 2024-08-16 20:13:24.042548-05:00
-    print(sunrise_time)  # 2024-08-17 06:37:01.529472-05:00
+        if self.sunrise_time != sunrise_time:
+            LOG.info(f"Sunrise time: {sunrise_time}")
+        if self.sunset_time != sunset_time:
+            LOG.info(f"Sunset time: {sunset_time}")
+        return sunrise_time, sunset_time
