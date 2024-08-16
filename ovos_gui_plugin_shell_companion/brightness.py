@@ -2,7 +2,7 @@ import datetime
 import shutil
 import subprocess
 from datetime import timedelta
-from typing import Optional
+from typing import Optional, Tuple
 
 from astral import LocationInfo
 from astral.sun import sun
@@ -135,7 +135,7 @@ class BrightnessManager:
             )
             for line in proc_fetch_vcp.stdout:
                 brightness_level = int(line.decode("utf-8").strip())
-                self._brightness_level = int(brightness_level * 100 / 255) # convert from 0-255 to 0-100 range
+                self._brightness_level = int(brightness_level * 100 / 255)  # convert from 0-255 to 0-100 range
 
         return self._brightness_level
 
@@ -167,7 +167,7 @@ class BrightnessManager:
                  "--bus", self.ddcutil_detected_bus, str(level)]
             )
         elif self.device_interface == "DSI":
-            level = int(level * 255 / 100) # DSI goes from 0 to 255, HDMI from o to 100
+            level = int(level * 255 / 100)  # DSI goes from 0 to 255, HDMI from o to 100
             subprocess.call(
                 f"echo {level} > /sys/class/backlight/rpi_backlight/brightness", shell=True
             )
@@ -195,7 +195,6 @@ class BrightnessManager:
 
         self.set_brightness(apply_level)
 
-
     @property
     def auto_dim_enabled(self) -> bool:
         """
@@ -208,7 +207,7 @@ class BrightnessManager:
             return False
         return self.config.get("auto_dim", True)
 
-    def start_auto_dim(self, nightmode:bool = False):
+    def start_auto_dim(self, nightmode: bool = False):
         """
         Start the auto-dim functionality.
         """
@@ -293,20 +292,13 @@ class BrightnessManager:
         now_time = now_local()
         # TODO - update if location changes in mycroft.conf
         try:
-            # TODO - better way to get sunset/sunrise....
-            location = Configuration()["location"]
-            lat = location["coordinate"]["latitude"]
-            lon = location["coordinate"]["longitude"]
-            tz = location["timezone"]["code"]
-            city = LocationInfo("Some city", "Some location", tz, lat, lon)
-            s = sun(city.observer, date=now_time)
-            self.sunset_time = s["sunset"]
-            self.sunrise_time = s["sunrise"]
+            self.sunrise_time, self.sunset_time = get_suntimes()
         except Exception as e:
             LOG.exception(f"Using default times for sunrise/sunset: {e}")
             self.sunset_time = datetime.datetime(year=now_time.year,
                                                  month=now_time.month,
-                                                 day=now_time.day, hour=22)
+                                                 day=now_time.day, hour=22,
+                                                 tzinfo=now_time.tzinfo)
             self.sunrise_time = self.sunset_time + timedelta(hours=8)
 
         # check sunset times again in 12 hours
@@ -391,3 +383,29 @@ class BrightnessManager:
         LOG.debug("Stopping auto night mode")
         self.config["auto_nightmode"] = False
         update_config("auto_nightmode", False)
+
+
+def get_suntimes() -> Tuple[datetime.datetime, datetime.datetime]:
+    location = Configuration()["location"]
+    lat = location["coordinate"]["latitude"]
+    lon = location["coordinate"]["longitude"]
+    tz = location["timezone"]["code"]
+    city = LocationInfo("Some city", "Some location", tz, lat, lon)
+
+    reference = now_local()  # now_local() is tz aware
+
+    s = sun(city.observer, date=reference)
+    s2 = sun(city.observer, date=reference + timedelta(days=1))
+    sunset_time = s["sunset"]
+    sunrise_time = s["sunrise"]
+    if reference > sunrise_time:  # get next sunrise, today's already happened
+        sunrise_time = s2["sunrise"]
+    if reference > sunset_time:  # get next sunset, today's already happened
+        sunrise_time = s2["sunrise"]
+    return sunrise_time, sunset_time
+
+
+if __name__ == "__main__":
+    sunrise_time, sunset_time = get_suntimes()
+    print(sunset_time)  # 2024-08-16 20:13:24.042548-05:00
+    print(sunrise_time)  # 2024-08-17 06:37:01.529472-05:00
