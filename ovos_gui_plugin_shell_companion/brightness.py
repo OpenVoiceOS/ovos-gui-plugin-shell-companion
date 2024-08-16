@@ -36,10 +36,10 @@ class BrightnessManager:
 
         self.bus.on("phal.brightness.control.get", self.handle_get_brightness)
         self.bus.on("phal.brightness.control.set", self.handle_set_brightness)
-        self.bus.on("gui.page_interaction", self.undim_display)
-        self.bus.on("gui.page_gained_focus", self.undim_display)
-        self.bus.on("recognizer_loop:wakeword", self.undim_display)
-        self.bus.on("recognizer_loop:record_begin", self.undim_display)
+        self.bus.on("gui.page_interaction", self.handle_undim_screen)
+        self.bus.on("gui.page_gained_focus", self.handle_undim_screen)
+        self.bus.on("recognizer_loop:wakeword", self.handle_undim_screen)
+        self.bus.on("recognizer_loop:record_begin", self.handle_undim_screen)
 
     ##############################################
     # brightness manager - TODO generic non rpi support
@@ -160,52 +160,45 @@ class BrightnessManager:
         return self.config.get("auto_dim", False)
 
     def start_auto_dim(self):
-        LOG.debug("Starting Auto Dim")
-        if self.auto_dim_enabled:
-            self.stop_auto_dim()
+        LOG.debug("Enabling Auto Dim")
         self.config["auto_dim"] = True
         update_config("auto_dim", True)
         # dim screen in 60 seconds
-        self.event_scheduler.schedule_event(self.handle_auto_dim_check,
-                                            when=now_local() + timedelta(seconds=60),
-                                            name="ovos-shell.autodim.check")
+        self.event_scheduler.schedule_event(self.handle_dim_screen,
+                                            when=now_local() + timedelta(seconds=60), # TODO - seconds from config
+                                            name="ovos-shell.autodim")
 
-    def handle_auto_dim_check(self, message=None):
-        if self._brightness_level > 20:
+    def handle_dim_screen(self, message=None):
+        if self.auto_dim_enabled:
             LOG.debug("Auto-dim: Lowering brightness")
             self.bus.emit(Message("phal.brightness.control.auto.dim.update",
                                   {"brightness": 20}))
-            self.set_brightness(20)  # TODO - enum
+            self.set_brightness(20)  # TODO - value from enum
 
-        # schedule next auto-dim check
-        if self.auto_dim_enabled:
-            self.event_scheduler.schedule_event(self.handle_auto_dim_check,
-                                                when=now_local() + timedelta(seconds=60),
-                                                name="ovos-shell.autodim.check")
+    def _restore(self):
+        if self._brightness_level == 20:
+            LOG.debug("Auto-dim: Restoring brightness")
+            if self.device_interface == "HDMI":
+                self.set_brightness(100)  # TODO - value from enum
+            if self.device_interface == "DSI":
+                self.set_brightness(255)  # TODO - value from enum
 
     def stop_auto_dim(self):
         if self.auto_dim_enabled:
             LOG.debug("Stopping Auto Dim")
             self.config["auto_dim"] = False
             update_config("auto_dim", False)
-            self.event_scheduler.cancel_scheduled_event("ovos-shell.autodim.check")
+            # cancel the next unfired dim event
+            self.event_scheduler.cancel_scheduled_event("ovos-shell.autodim")
+            self._restore()
 
-    def undim_display(self, message=None):
+    def handle_undim_screen(self, message=None):
         if self.auto_dim_enabled:
-            if self._brightness_level == 20:
-                LOG.debug("Auto-dim: Restoring brightness on interaction")
-                if self.device_interface == "HDMI":
-                    self.set_brightness(100)  # TODO - enum
-                if self.device_interface == "DSI":
-                    self.set_brightness(255)  # TODO - enum
-                self.bus.emit(Message("phal.brightness.control.auto.dim.update",
-                                      {"brightness": 100}))
-
-            # re-schedule next auto-dim check
-            self.event_scheduler.cancel_scheduled_event("ovos-shell.autodim.check")
-            self.event_scheduler.schedule_event(self.handle_auto_dim_check,
+            self._restore()
+            # schedule next auto-dim
+            self.event_scheduler.schedule_event(self.handle_dim_screen,
                                                 when=now_local() + timedelta(seconds=60),
-                                                name="ovos-shell.autodim.check")
+                                                name="ovos-shell.autodim")
 
     ##################################
     # AUTO NIGHT MODE HANDLING
