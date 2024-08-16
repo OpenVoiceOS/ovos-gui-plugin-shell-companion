@@ -1,8 +1,6 @@
 import datetime
 import shutil
 import subprocess
-import threading
-import time
 from datetime import timedelta
 
 from astral import LocationInfo
@@ -28,16 +26,16 @@ class BrightnessManager:
         self.ddcutil = shutil.which("ddcutil")
         self.ddcutil_detected_bus = None
         self.ddcutil_brightness_code = None
-        self.timer_thread = None  # TODO - use event scheduler too
 
+        self._brightness_level = 100
         self.sunset_time = None
         self.sunrise_time = None
         self.get_sunset_time()
 
         self.discover()
 
-        self.bus.on("phal.brightness.control.get", self.query_current_brightness)
-        self.bus.on("phal.brightness.control.set", self.set_brightness_from_bus)
+        self.bus.on("phal.brightness.control.get", self.handle_get_brightness)
+        self.bus.on("phal.brightness.control.set", self.handle_set_brightness)
         self.bus.on("gui.page_interaction", self.undim_display)
         self.bus.on("gui.page_gained_focus", self.undim_display)
         self.bus.on("recognizer_loop:wakeword", self.undim_display)
@@ -87,7 +85,7 @@ class BrightnessManager:
 
         # Get the current brightness level
 
-    def get_brightness(self):
+    def get_brightness(self) -> int:
         LOG.info("Getting current brightness level")
         if self.device_interface == "HDMI":
             proc_fetch_vcp = subprocess.Popen(
@@ -97,16 +95,18 @@ class BrightnessManager:
                 if "current value" in line.decode("utf-8"):
                     brightness_level = line.decode(
                         "utf-8").split("current value = ")[1].split(",")[0].strip()
-                    return int(brightness_level)
+                    self._brightness_level = int(brightness_level)
 
         if self.device_interface == "DSI":
             proc_fetch_vcp = subprocess.Popen(
                 ["cat", "/sys/class/backlight/rpi_backlight/actual_brightness"], stdout=subprocess.PIPE)
             for line in proc_fetch_vcp.stdout:
                 brightness_level = line.decode("utf-8").strip()
-                return int(brightness_level)
+                self._brightness_level = int(brightness_level)
 
-    def query_current_brightness(self, message):
+        return self._brightness_level
+
+    def handle_get_brightness(self, message):
         current_brightness = self.get_brightness()
         if self.device_interface == "HDMI":
             self.bus.emit(message.response(
@@ -116,9 +116,8 @@ class BrightnessManager:
             self.bus.emit(message.response(
                 data={"brightness": brightness_percentage}))
 
-        # Set the brightness level
-
-    def set_brightness(self, level):
+    # Set the brightness level
+    def set_brightness(self, level: int):
         LOG.debug("Setting brightness level")
         if self.device_interface == "HDMI":
             subprocess.Popen([self.ddcutil, "setvcp", self.ddcutil_brightness_code,
@@ -127,9 +126,10 @@ class BrightnessManager:
             subprocess.call(
                 f"echo {level} > /sys/class/backlight/rpi_backlight/brightness", shell=True)
 
-        LOG.info("Brightness level set to {}".format(level))
+        LOG.info(f"Brightness level set to {level}")
+        self._brightness_level = level
 
-    def set_brightness_from_bus(self, message):
+    def handle_set_brightness(self, message):
         LOG.debug("Setting brightness level from bus")
         level = message.data.get("brightness", "")
 
@@ -165,41 +165,47 @@ class BrightnessManager:
             self.stop_auto_dim()
         self.config["auto_dim"] = True
         update_config("auto_dim", True)
+        # dim screen in 60 seconds
+        self.event_scheduler.schedule_event(self.handle_auto_dim_check,
+                                            when=now_local() + timedelta(seconds=60),
+                                            name="ovos-shell.autodim.check")
 
-        self.timer_thread = threading.Thread(target=self.auto_dim_timer)
-        self.timer_thread.start()
+    def handle_auto_dim_check(self, message=None):
+        if self._brightness_level > 20:
+            LOG.debug("Auto-dim: Lowering brightness")
+            self.bus.emit(Message("phal.brightness.control.auto.dim.update",
+                                  {"brightness": 20}))
+            self.set_brightness(20)  # TODO - enum
 
-    def auto_dim_timer(self):
-        while self.auto_dim_enabled:
-            time.sleep(60)
-            LOG.debug("Adjusting brightness automatically")
-            if self.device_interface == "HDMI":
-                current_brightness = 100
-            if self.device_interface == "DSI":
-                current_brightness = 255
-
-            self.bus.emit(
-                Message("phal.brightness.control.auto.dim.update", {"brightness": 20}))
-            self.set_brightness(20)
+        # schedule next auto-dim check
+        if self.auto_dim_enabled:
+            self.event_scheduler.schedule_event(self.handle_auto_dim_check,
+                                                when=now_local() + timedelta(seconds=60),
+                                                name="ovos-shell.autodim.check")
 
     def stop_auto_dim(self):
         if self.auto_dim_enabled:
             LOG.debug("Stopping Auto Dim")
             self.config["auto_dim"] = False
             update_config("auto_dim", False)
-            if self.timer_thread:
-                self.timer_thread.join()
+            self.event_scheduler.cancel_scheduled_event("ovos-shell.autodim.check")
 
     def undim_display(self, message=None):
         if self.auto_dim_enabled:
-            LOG.debug("Undimming display on interaction")
-            if self.device_interface == "HDMI":
-                self.set_brightness(100)
-            if self.device_interface == "DSI":
-                self.set_brightness(255)
-            self.bus.emit(
-                Message("phal.brightness.control.auto.dim.update", {"brightness": "100"}))
-            self.start_auto_dim()
+            if self._brightness_level == 20:
+                LOG.debug("Auto-dim: Restoring brightness on interaction")
+                if self.device_interface == "HDMI":
+                    self.set_brightness(100)  # TODO - enum
+                if self.device_interface == "DSI":
+                    self.set_brightness(255)  # TODO - enum
+                self.bus.emit(Message("phal.brightness.control.auto.dim.update",
+                                      {"brightness": 100}))
+
+            # re-schedule next auto-dim check
+            self.event_scheduler.cancel_scheduled_event("ovos-shell.autodim.check")
+            self.event_scheduler.schedule_event(self.handle_auto_dim_check,
+                                                when=now_local() + timedelta(seconds=60),
+                                                name="ovos-shell.autodim.check")
 
     ##################################
     # AUTO NIGHT MODE HANDLING
@@ -224,9 +230,9 @@ class BrightnessManager:
                                                  day=now_time.day, hour=22)
             self.sunrise_time = self.sunset_time + timedelta(hours=8)
 
-        # check sunset times again in 24 hours
+        # check sunset times again in 12 hours
         self.event_scheduler.schedule_event(self.get_sunset_time,
-                                            when=now_time + timedelta(hours=24),
+                                            when=now_time + timedelta(hours=12),
                                             name="ovos-shell.suntimes.check")
 
     @property
