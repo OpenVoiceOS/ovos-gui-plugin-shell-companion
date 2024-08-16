@@ -240,6 +240,9 @@ class BrightnessManager:
             self.bus.emit(Message("phal.brightness.control.auto.dim.update",
                                   {"brightness": lowb}))
             self.set_brightness(lowb)
+            if self.auto_night_mode_enabled and self.is_night:
+                # show night clock in homescreen
+                self.bus.emit(Message("phal.brightness.control.auto.night.mode.enabled"))
 
     def _restore(self):
         """
@@ -343,6 +346,7 @@ class BrightnessManager:
         if self.auto_night_mode_enabled:
             LOG.debug("It is daytime")
             self.default_brightness = self.config.get("default_brightness", 100)
+            # reset homescreen to day mode
             self.bus.emit(Message("ovos.homescreen.main_view.current_index.set",
                                   {"current_index": 1}))
 
@@ -365,6 +369,7 @@ class BrightnessManager:
         if self.auto_night_mode_enabled:
             LOG.debug("It is nighttime")
             self.default_brightness = self.config.get("night_default_brightness", 70)
+            self.set_brightness(self.default_brightness)
             # show night clock in homescreen
             self.bus.emit(Message("phal.brightness.control.auto.night.mode.enabled"))
             # equivalent to
