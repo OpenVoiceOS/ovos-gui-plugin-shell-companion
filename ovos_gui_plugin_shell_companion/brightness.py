@@ -139,7 +139,7 @@ class BrightnessManager:
                 brightness_level = line.decode("utf-8").strip()
                 self._brightness_level = int(brightness_level) * 100 / 255 # convert from 0-255 to 0-100 range
 
-        return self._brightness_level
+        return int(self._brightness_level)
 
     def handle_get_brightness(self, message: Message):
         """
@@ -166,14 +166,15 @@ class BrightnessManager:
         if self.device_interface is None:
             LOG.error("brightness control interface not available, can not change brightness")
             return
-        LOG.debug("Setting brightness level")
+        level = int(level)
+        LOG.debug(f"Setting brightness level: {level}")
         if self.device_interface == "HDMI":
             subprocess.Popen(
                 [self.ddcutil, "setvcp", self.ddcutil_brightness_code,
                  "--bus", self.ddcutil_detected_bus, str(level)]
             )
         elif self.device_interface == "DSI":
-            level = level * 255 / 100 # DSI goes from 0 to 255, HDMI from o to 100
+            level = int(level * 255 / 100) # DSI goes from 0 to 255, HDMI from o to 100
             subprocess.call(
                 f"echo {level} > /sys/class/backlight/rpi_backlight/brightness", shell=True
             )
