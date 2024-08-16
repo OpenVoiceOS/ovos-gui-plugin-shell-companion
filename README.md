@@ -1,6 +1,6 @@
 # OVOS Shell companion
 
-provides various bus APIs that integrate with ovos-shell
+provides various bus APIs that integrate with [ovos-shell](https://github.com/OpenVoiceOS/ovos-shell)
     
     - color scheme manager
     - notifications widgets
