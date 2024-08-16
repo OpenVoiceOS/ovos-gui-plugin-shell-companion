@@ -38,9 +38,7 @@ class BrightnessManager:
 
         self.default_brightness = self.config.get("default_brightness", 100)
         self._brightness_level: int = self.default_brightness
-        self.sunset_time: Optional[datetime.datetime] = None
-        self.sunrise_time: Optional[datetime.datetime] = None
-        self.sync_sunset_times()
+        self.sunrise_time, self.sunset_time = get_suntimes()
 
         self.discover()
 
@@ -295,26 +293,6 @@ class BrightnessManager:
     # AUTO NIGHT MODE HANDLING
     # TODO - allow to do it based on camera, reacting live to brightness,
     #  instead of depending on sunset times
-    def sync_sunset_times(self):
-        """
-        Get the sunset and sunrise times based on the configured location.
-
-        Args:
-            message: Optional message received from the bus.
-        """
-        LOG.debug("Calculating sunrise/sunset times")
-        now_time = now_local()
-        # TODO - update if location changes in mycroft.conf
-        try:
-            self.sunrise_time, self.sunset_time = get_suntimes()
-        except Exception as e:
-            LOG.exception(f"Using default times for sunrise/sunset: {e}")
-            self.sunset_time = datetime.datetime(year=now_time.year,
-                                                 month=now_time.month,
-                                                 day=now_time.day, hour=22,
-                                                 tzinfo=now_time.tzinfo)
-            self.sunrise_time = self.sunset_time + timedelta(hours=8)
-
     @property
     def auto_night_mode_enabled(self) -> bool:
         """
@@ -327,7 +305,7 @@ class BrightnessManager:
 
     @property
     def is_night(self) -> bool:
-        self.sync_sunset_times()
+        self.sunrise_time, self.sunset_time = get_suntimes()  # sync
         return self.sunset_time <= now_local() < self.sunrise_time
 
     def start_auto_night_mode(self):
@@ -350,7 +328,7 @@ class BrightnessManager:
         Args:
             message: Optional message received from the bus.
         """
-        self.sync_sunset_times()
+        self.sunrise_time, self.sunset_time = get_suntimes()  # sync
         if self.auto_night_mode_enabled:
             LOG.debug("It is daytime")
             self.default_brightness = self.config.get("default_brightness", 100)
@@ -378,7 +356,7 @@ class BrightnessManager:
         Args:
             message: Optional message received from the bus.
         """
-        self.sync_sunset_times()
+        self.sunrise_time, self.sunset_time = get_suntimes()  # sync
         if self.auto_night_mode_enabled:
             LOG.debug("It is nighttime")
             self.default_brightness = self.config.get("night_default_brightness", 70)
@@ -420,6 +398,8 @@ def get_suntimes() -> Tuple[datetime.datetime, datetime.datetime]:
         sunrise_time = s2["sunrise"]
     if reference > sunset_time:  # get next sunset, today's already happened
         sunset_time = s2["sunset"]
+    LOG.debug(f"Sunrise time: {sunrise_time}")
+    LOG.debug(f"Sunset time: {sunset_time}")
     return sunrise_time, sunset_time
 
 
