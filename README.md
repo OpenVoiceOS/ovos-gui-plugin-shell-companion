@@ -38,11 +38,11 @@ brightness level during nighttime can be set via `"night_default_brightness"`
 
 ### Auto Dim
 
-auto dim will lower the screen brightness after 60 seconds of inactivity, until the user interacts with the GUI or talks to the OVOS device
+auto-dim will lower the screen brightness after 60 seconds of inactivity, until the user interacts with the GUI or talks to the OVOS device
 
 brightness level when idle can be set via `"low_brightness"`
 
-auto dim can be enabled at all times by setting `"auto_dim": true` in your config
+auto-dim can be enabled at all times by setting `"auto_dim": true` in your config
 
 
 ## DEPRECATION WARNING
