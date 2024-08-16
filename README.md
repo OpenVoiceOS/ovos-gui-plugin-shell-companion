@@ -10,7 +10,7 @@ provides various bus APIs that integrate with ovos-shell
 
 ## Features
 
-```javascript
+```json
 {
   "gui": {
      "ovos-gui-plugin-shell-companion": {
@@ -50,8 +50,8 @@ auto-dim can be enabled at all times by setting `"auto_dim": true` in your confi
 > in **ovos-core version 0.0.7** the bus apis provided by this repo used to be several individual PHAL plugins
 
 the following packages have been deprecated in favor of this repo:
-- https://github.com/OpenVoiceOS/ovos-PHAL-plugin-dashboard   <- DEPRECATED, community maintained, no official replacement, [removed from ovos-shell](https://github.com/OpenVoiceOS/ovos-gui/pull/10)
-- https://github.com/OpenVoiceOS/ovos-PHAL-plugin-configuration-provider <- now part of this repo
-- https://github.com/OpenVoiceOS/ovos-PHAL-plugin-notification-widgets <- now part of this repo
-- https://github.com/OpenVoiceOS/ovos-PHAL-plugin-brightness-control-rpi <- now part of this repo
-- https://github.com/OpenVoiceOS/ovos-PHAL-plugin-color-scheme-manager <- now part of this repo
+- [ovos-PHAL-plugin-dashboard](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-dashboard) <- DEPRECATED, community maintained, no official replacement, [removed from ovos-shell](https://github.com/OpenVoiceOS/ovos-gui/pull/10)
+- [ovos-PHAL-plugin-configuration-provider](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-configuration-provider) <- now part of this repo
+- [ovos-PHAL-plugin-notification-widgets](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-notification-widgets) <- now part of this repo
+- [ovos-PHAL-plugin-brightness-control-rpi](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-brightness-control-rpi) <- now part of this repo
+- [ovos-PHAL-plugin-color-scheme-manager](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-color-scheme-manager) <- now part of this repo
