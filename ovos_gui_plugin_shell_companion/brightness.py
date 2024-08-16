@@ -92,6 +92,8 @@ class BrightnessManager:
                 else:
                     self.ddcutil_detected_bus = None
                     LOG.error("Display is not detected by DDCUTIL")
+                    self.device_interface = None
+                    return
 
                 if self.ddcutil_detected_bus:
                     proc_fetch_vcp = subprocess.Popen(
@@ -134,9 +136,8 @@ class BrightnessManager:
                 ["cat", "/sys/class/backlight/rpi_backlight/actual_brightness"], stdout=subprocess.PIPE
             )
             for line in proc_fetch_vcp.stdout:
-                # TODO - is this 0-100 or 0-255 range ?
                 brightness_level = line.decode("utf-8").strip()
-                self._brightness_level = int(brightness_level)
+                self._brightness_level = int(brightness_level) * 100 / 255 # convert from 0-255 to 0-100 range
 
         return self._brightness_level
 
