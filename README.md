@@ -30,8 +30,8 @@ provides various bus APIs that integrate with ovos-shell
 
 night mode will perform actions based on sunset/sunrise times
 
-- the homescreen changes to a simple clock with white text on black background
-- default brightness is reduced
+- the homescreen changes to a simple clock with white text on a black background.
+- default brightness is reduced.
 - auto-dim is enabled
 
 brightness level during nighttime can be set via `"night_default_brightness"`
