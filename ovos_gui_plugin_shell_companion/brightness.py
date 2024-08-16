@@ -54,13 +54,17 @@ class BrightnessManager:
     ##############################################
     # brightness manager
     # TODO - allow dynamic brightness based on camera, reacting live to brightness,
-    #  instead of depending on a timer
 
     # Discover the brightness control device interface (HDMI / DSI) on the Raspberry PI
     def discover(self):
         """
         Discover the brightness control device interface (HDMI / DSI) on the Raspberry Pi.
         """
+        # TODO - support desktops too, eg, mini pc running ovos-shell
+        if self.vcgencmd is None:
+            LOG.error("Can not find brightness control interface, 'vcgencmd' unavailable")
+            return
+
         try:
             LOG.info("Discovering brightness control device interface")
             proc = subprocess.Popen(
@@ -69,7 +73,11 @@ class BrightnessManager:
             if proc.stdout.read().decode("utf-8").strip() in ('1', 'display_default_lcd=1'):
                 self.device_interface = "DSI"
             else:
+                if self.ddcutil is None:
+                    LOG.error("'ddcutil' unavailable, can not control HDMI screen brightness")
+                    return
                 self.device_interface = "HDMI"
+
             LOG.info(f"Brightness control device interface is {self.device_interface}")
 
             if self.device_interface == "HDMI":
@@ -203,7 +211,7 @@ class BrightnessManager:
         """
         if self.device_interface is None:
             return False
-        return self.config.get("auto_dim", False)
+        return self.config.get("auto_dim", True)
 
     def start_auto_dim(self):
         """
