@@ -14,6 +14,8 @@ provides various bus APIs that integrate with [ovos-shell](https://github.com/Op
 {
   "gui": {
      "ovos-gui-plugin-shell-companion": {
+       "sunrise_time": "auto",
+       "sunset_time": "auto",
        "default_brightness": 100,
        "night_default_brightness": 70,
        "low_brightness": 20,
@@ -33,6 +35,8 @@ night mode will perform actions based on sunset/sunrise times
 - the homescreen changes to a simple clock with white text on a black background.
 - default brightness is reduced.
 - auto-dim is enabled
+
+`sunrise_time` and `sunset_time` will be automatically calculated based on location if set to `"auto"`, specific times can be explicitly set with the format `"HH:MM"`, eg. if you are an early riser you may want `"sunrise_time": "05:30"`
 
 brightness level during nighttime can be set via `"night_default_brightness"`
 

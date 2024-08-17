@@ -379,23 +379,57 @@ class BrightnessManager:
         update_config("auto_nightmode", False)
 
     def get_suntimes(self) -> Tuple[datetime.datetime, datetime.datetime]:
-        location = Configuration()["location"]
-        lat = location["coordinate"]["latitude"]
-        lon = location["coordinate"]["longitude"]
-        tz = location["timezone"]["code"]
-        city = LocationInfo("Some city", "Some location", tz, lat, lon)
+        sunrise = self.config.get("sunrise_time", "auto")
+        sunset = self.config.get("sunset_time", "auto")
+        sunset_time = None
+        sunrise_time = None
 
         reference = now_local()  # now_local() is tz aware
 
-        s = sun(city.observer, date=reference)
-        s2 = sun(city.observer, date=reference + timedelta(days=1))
-        sunset_time = s["sunset"]
-        sunrise_time = s["sunrise"]
-        if reference > sunrise_time:  # get next sunrise, today's already happened
-            sunrise_time = s2["sunrise"]
-        if reference > sunset_time:  # get next sunset, today's already happened
-            sunset_time = s2["sunset"]
+        # check if sunrise has been explicitly configured by user
+        if ":" in sunrise:
+            hours, mins = sunrise.split(":")
+            sunrise_time = datetime.datetime(hour=int(hours),
+                                             minute=int(mins),
+                                             day=reference.day,
+                                             month=reference.month,
+                                             year=reference.year,
+                                             tzinfo=reference.tzinfo)
+            if reference > sunrise_time:
+                sunrise_time += timedelta(days=1)
 
+        # check if sunset has been explicitly configured by user
+        if ":" in sunset:
+            hours, mins = sunset.split(":")
+            sunset_time = datetime.datetime(hour=int(hours),
+                                            minute=int(mins),
+                                            day=reference.day,
+                                            month=reference.month,
+                                            year=reference.year,
+                                            tzinfo=reference.tzinfo)
+            if reference > sunset_time:
+                sunset_time += timedelta(days=1)
+
+        # auto determine sunrise/sunset
+        if sunrise_time is None or sunset_time is None:
+            location = Configuration()["location"]
+            lat = location["coordinate"]["latitude"]
+            lon = location["coordinate"]["longitude"]
+            tz = location["timezone"]["code"]
+            city = LocationInfo("Some city", "Some location", tz, lat, lon)
+
+            s = sun(city.observer, date=reference)
+            s2 = sun(city.observer, date=reference + timedelta(days=1))
+            if not sunset_time:
+                sunset_time = s["sunset"]
+                if reference > sunset_time:  # get next sunset, today's already happened
+                    sunset_time = s2["sunset"]
+            if not sunrise_time:
+                sunrise_time = s["sunrise"]
+                if reference > sunrise_time:  # get next sunrise, today's already happened
+                    sunrise_time = s2["sunrise"]
+
+        # info logs
         if self.sunrise_time is None or self.sunrise_time != sunrise_time:
             LOG.info(f"Sunrise time: {sunrise_time}")
         if self.sunset_time is None or self.sunset_time != sunset_time:
