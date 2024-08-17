@@ -58,52 +58,60 @@ class BrightnessManager:
         """
         Discover the brightness control device interface (HDMI / DSI) on the Raspberry Pi.
         """
-        # TODO - support desktops too, eg, mini pc running ovos-shell
-        if self.vcgencmd is None:
-            LOG.error("Can not find brightness control interface, 'vcgencmd' unavailable")
+        if not self.vcgencmd:
+            LOG.error("Cannot find brightness control interface, 'vcgencmd' is unavailable.")
             return
 
+        LOG.info("Discovering brightness control device interface")
+        self.device_interface = self._get_device_interface()
+
+        if self.device_interface == "HDMI" and self.ddcutil:
+            self._discover_ddcutil_bus_and_brightness_code()
+        elif self.device_interface is None:
+            LOG.error("No compatible display interface found for brightness control.")
+
+    def _get_device_interface(self) -> Optional[str]:
+        """
+        Get the display device interface type (DSI or HDMI).
+
+        Returns:
+            Optional[str]: 'DSI' for DSI interface, 'HDMI' for HDMI interface, or None if not found.
+        """
         try:
-            LOG.info("Discovering brightness control device interface")
-            proc = subprocess.Popen(
-                [self.vcgencmd, "get_config", "display_default_lcd"], stdout=subprocess.PIPE
-            )
-            if proc.stdout.read().decode("utf-8").strip() in ('1', 'display_default_lcd=1'):
-                self.device_interface = "DSI"
-            else:
-                if self.ddcutil is None:
-                    LOG.error("'ddcutil' unavailable, can not control HDMI screen brightness")
-                    return
-                self.device_interface = "HDMI"
+            with subprocess.Popen([self.vcgencmd, "get_config", "display_default_lcd"],
+                                  stdout=subprocess.PIPE) as proc:
+                output = proc.stdout.read().decode("utf-8").strip()
+                if output in ('1', 'display_default_lcd=1'):
+                    return "DSI"
+                return "HDMI" if self.ddcutil else None
+        except subprocess.SubprocessError as e:
+            LOG.error(f"Error discovering device interface: {e}")
+            return None
 
-            LOG.info(f"Brightness control device interface is {self.device_interface}")
-
-            if self.device_interface == "HDMI":
-                proc_detect = subprocess.Popen(
-                    [self.ddcutil, "detect"], stdout=subprocess.PIPE
-                )
-
-                ddcutil_detected_output = proc_detect.stdout.read().decode("utf-8")
-                if "I2C bus:" in ddcutil_detected_output:
-                    bus_code = ddcutil_detected_output.split("I2C bus: ")[1].strip().split("\n")[0]
-                    self.ddcutil_detected_bus = bus_code.split("-")[1].strip()
-                else:
-                    self.ddcutil_detected_bus = None
-                    LOG.error("Display is not detected by DDCUTIL")
+    def _discover_ddcutil_bus_and_brightness_code(self):
+        """
+        Discover the DDC/CI bus and brightness VCP code for the HDMI interface.
+        """
+        try:
+            with subprocess.Popen([self.ddcutil, "detect"], stdout=subprocess.PIPE) as proc:
+                output = proc.stdout.read().decode("utf-8")
+                bus_line = next((line for line in output.splitlines() if "I2C bus:" in line), None)
+                if not bus_line:
+                    LOG.error("Display is not detected by DDCUTIL.")
                     self.device_interface = None
                     return
+                self.ddcutil_detected_bus = bus_line.split("I2C bus: ")[1].split("-")[1].strip()
 
-                if self.ddcutil_detected_bus:
-                    proc_fetch_vcp = subprocess.Popen(
-                        [self.ddcutil, "getvcp", "known", "--bus", self.ddcutil_detected_bus],
-                        stdout=subprocess.PIPE)
-                    # check the vcp output for the Brightness string and get its VCP code
-                    for line in proc_fetch_vcp.stdout:
-                        if "Brightness" in line.decode("utf-8"):
-                            self.ddcutil_brightness_code = line.decode("utf-8").split(" ")[2].strip()
-        except Exception as e:
-            LOG.error(e)
-            LOG.error("Brightness control is unavailable, no DSI or HDMI screen detected")
+            with subprocess.Popen([self.ddcutil, "getvcp", "known", "--bus", self.ddcutil_detected_bus],
+                                  stdout=subprocess.PIPE) as proc:
+                for line in proc.stdout:
+                    decoded_line = line.decode("utf-8")
+                    if "Brightness" in decoded_line:
+                        self.ddcutil_brightness_code = decoded_line.split(" ")[2].strip()
+                        break
+        except subprocess.SubprocessError as e:
+            LOG.error(f"Error discovering DDC/CI bus and brightness code: {e}")
+            self.device_interface = None
 
     # Get the current brightness level
     def get_brightness(self) -> int:
