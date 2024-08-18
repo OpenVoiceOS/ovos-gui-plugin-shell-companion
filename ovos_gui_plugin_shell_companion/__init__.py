@@ -79,7 +79,7 @@ class OVOSShellCompanionExtension(GUIExtension):
                                   self.handle_display_auto_nightmode_config_set)
 
     def handle_remove_namespace(self, message):
-        LOG.info("Got Clear Namespace Event In Skill")
+        LOG.debug("Clearing namespace (mycroft.gui.screen.close)")
         get_skill_namespace = message.data.get("skill_id", "")
         if get_skill_namespace:
             self.bus.emit(Message("gui.clear.namespace",

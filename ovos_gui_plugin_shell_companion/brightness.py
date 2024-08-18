@@ -1,6 +1,5 @@
 import datetime
-import shutil
-import subprocess
+import threading
 from datetime import timedelta
 from typing import Optional, Tuple
 
@@ -16,6 +15,12 @@ from ovos_gui_plugin_shell_companion.helpers import update_config
 
 
 class BrightnessManager:
+    """ovos-shell has a fake brightness setting, it will dim the QML itself, not control the screen
+
+    ovos-shell slider: https://github.com/OpenVoiceOS/ovos-shell/blob/master/application/qml/panel/quicksettings/BrightnessSlider.qml
+        - emitted bus event from shell slider: "phal.brightness.control.set", {"brightness": fixedValue}
+        - to update slider externally: "phal.brightness.control.auto.dim.update"/"phal.brightness.control.get.response", {"brightness": fixedValue}
+    """
     def __init__(self, bus, config: dict):
         """
         Initialize the BrightnessManager.
@@ -24,126 +29,72 @@ class BrightnessManager:
             bus: Message bus for inter-process communication.
             config: Configuration dictionary for brightness settings.
         """
+        self._lock = threading.RLock()
         self.bus = bus
         self.config = config
         self.event_scheduler = EventSchedulerInterface()
         self.event_scheduler.set_id("ovos-shell")
         self.event_scheduler.set_bus(self.bus)
-        self.device_interface = "DSI"
-        self.vcgencmd = shutil.which("vcgencmd")
-        self.ddcutil = shutil.which("ddcutil")
-        self.ddcutil_detected_bus = None
-        self.ddcutil_brightness_code = None
-        self.device_interface = None
 
+        LOG.info(f"auto dim enabled: {self.auto_dim_enabled}")
+        LOG.info(f"auto night mode enabled: {self.auto_night_mode_enabled}")
+        self.fake_brightness = not self.config.get("external_plugin", False)  # allow delegating to external PHAL plugin
         self.default_brightness = self.config.get("default_brightness", 100)
         self._brightness_level: int = self.default_brightness
         self.sunrise_time, self.sunset_time = None, None
 
-        self.discover()
-
         self.bus.on("phal.brightness.control.get", self.handle_get_brightness)
-        self.bus.on("phal.brightness.control.set", self.handle_set_brightness)
+        self.bus.on("phal.brightness.control.set", self.handle_sync_brightness)  # from external PHAL plugin
+        self.bus.on("phal.brightness.control.sync", self.handle_sync_brightness)  # from GUI slider
+
         self.bus.on("gui.page_interaction", self.handle_undim_screen)
         self.bus.on("gui.page_gained_focus", self.handle_undim_screen)
         self.bus.on("recognizer_loop:wakeword", self.handle_undim_screen)
         self.bus.on("recognizer_loop:record_begin", self.handle_undim_screen)
 
+        self.start()
+
+    def start(self):
+        if self.auto_night_mode_enabled:
+            LOG.debug("Starting auto night mode on launch")
+            sunrise = self.config.get("sunrise_time", "auto")
+            sunset = self.config.get("sunset_time", "auto")
+            LOG.debug(f"sunrise set by user - {sunrise}")
+            LOG.debug(f"sunset set by user - {sunset}")
+            self.start_auto_night_mode()
+        if self.auto_dim_enabled:
+            LOG.debug("Starting auto dim on launch")
+            self.start_auto_dim()
+
     ##############################################
     # brightness manager
     # TODO - allow dynamic brightness based on camera, reacting live to brightness,
-
-    # Discover the brightness control device interface (HDMI / DSI) on the Raspberry PI
-    def discover(self):
+    def set_brightness(self, level: int):
         """
-        Discover the brightness control device interface (HDMI / DSI) on the Raspberry Pi.
+        Set the brightness level.
+
+        Args:
+            level: Brightness level to set.
         """
-        if not self.vcgencmd:
-            LOG.error("Cannot find brightness control interface, 'vcgencmd' is unavailable.")
-            return
+        with self._lock:  # use a lock so this doesnt fire multiple times
+            level = int(level)
+            if level == self._brightness_level:
+                return  # avoid log spam
+            LOG.info(f"Brightness level set to {level}")
+            self._brightness_level = level
 
-        LOG.info("Discovering brightness control device interface")
-        self.device_interface = self._get_device_interface()
-
-        if self.device_interface == "HDMI" and self.ddcutil:
-            self._discover_ddcutil_bus_and_brightness_code()
-        elif self.device_interface is None:
-            LOG.error("No compatible display interface found for brightness control.")
-
-    def _get_device_interface(self) -> Optional[str]:
-        """
-        Get the display device interface type (DSI or HDMI).
-
-        Returns:
-            Optional[str]: 'DSI' for DSI interface, 'HDMI' for HDMI interface, or None if not found.
-        """
-        try:
-            with subprocess.Popen([self.vcgencmd, "get_config", "display_default_lcd"],
-                                  stdout=subprocess.PIPE) as proc:
-                output = proc.stdout.read().decode("utf-8").strip()
-                if output in ('1', 'display_default_lcd=1'):
-                    return "DSI"
-                return "HDMI" if self.ddcutil else None
-        except subprocess.SubprocessError as e:
-            LOG.error(f"Error discovering device interface: {e}")
-            return None
-
-    def _discover_ddcutil_bus_and_brightness_code(self):
-        """
-        Discover the DDC/CI bus and brightness VCP code for the HDMI interface.
-        """
-        try:
-            with subprocess.Popen([self.ddcutil, "detect"], stdout=subprocess.PIPE) as proc:
-                output = proc.stdout.read().decode("utf-8")
-                bus_line = next((line for line in output.splitlines() if "I2C bus:" in line), None)
-                if not bus_line:
-                    LOG.error("Display is not detected by DDCUTIL.")
-                    self.device_interface = None
-                    return
-                self.ddcutil_detected_bus = bus_line.split("I2C bus: ")[1].split("-")[1].strip()
-
-            with subprocess.Popen([self.ddcutil, "getvcp", "known", "--bus", self.ddcutil_detected_bus],
-                                  stdout=subprocess.PIPE) as proc:
-                for line in proc.stdout:
-                    decoded_line = line.decode("utf-8")
-                    if "Brightness" in decoded_line:
-                        self.ddcutil_brightness_code = decoded_line.split(" ")[2].strip()
-                        break
-        except subprocess.SubprocessError as e:
-            LOG.error(f"Error discovering DDC/CI bus and brightness code: {e}")
-            self.device_interface = None
-
-    # Get the current brightness level
-    def get_brightness(self) -> int:
-        """
-        Get the current brightness level.
-
-        Returns:
-            int: The current brightness level.
-        """
-        if self.device_interface is None:
-            LOG.error("brightness control interface not available, can not read brightness level")
-            return self._brightness_level
-
-        LOG.info("Getting current brightness level")
-        if self.device_interface == "HDMI":
-            proc_fetch_vcp = subprocess.Popen(
-                [self.ddcutil, "getvcp", self.ddcutil_brightness_code, "--bus", self.ddcutil_detected_bus],
-                stdout=subprocess.PIPE
-            )
-            for line in proc_fetch_vcp.stdout:
-                if "current value" in line.decode("utf-8"):
-                    brightness_level = line.decode("utf-8").split("current value = ")[1].split(",")[0].strip()
-                    self._brightness_level = int(brightness_level)
-        elif self.device_interface == "DSI":
-            proc_fetch_vcp = subprocess.Popen(
-                ["cat", "/sys/class/backlight/rpi_backlight/actual_brightness"], stdout=subprocess.PIPE
-            )
-            for line in proc_fetch_vcp.stdout:
-                brightness_level = int(line.decode("utf-8").strip())
-                self._brightness_level = int(brightness_level * 100 / 255)  # convert from 0-255 to 0-100 range
-
-        return self._brightness_level
+            if self.fake_brightness:
+                LOG.debug("delegating brightness change to ovos-shell fake brightness")
+                # ovos-shell will apply fake brightness
+                self.bus.emit(Message("phal.brightness.control.auto.dim.update",
+                                      {"brightness": level}))
+            else:  # will NOT update ovos-shell slider
+                LOG.debug("delegating brightness change to external plugin")
+                self.bus.emit(Message("phal.brightness.control.set",
+                                      {"brightness": level}))
+                # sync GUI slider by reporting new value
+                self.bus.emit(Message("phal.brightness.control.get.response",
+                                      {"brightness": level}))
 
     def handle_get_brightness(self, message: Message):
         """
@@ -152,59 +103,21 @@ class BrightnessManager:
         Args:
             message: The message received from the bus.
         """
-        self.bus.emit(message.response(data={"brightness": self.get_brightness()}))
-
-    # Set the brightness level
-    def set_brightness(self, level: int):
-        """
-        Set the brightness level.
-
-        Args:
-            level: Brightness level to set.
-        """
-        if self.device_interface is None:
-            LOG.error("brightness control interface not available, can not change brightness")
+        if not self.fake_brightness:
+            # let external PHAL plugin handle it
             return
-        level = int(level)
-        if level == self._brightness_level:
-            return  # avoid log spam
+        self.bus.emit(message.response(data={"brightness": self._brightness_level}))
 
-        LOG.debug(f"Setting brightness level: {level}")
-        if self.device_interface == "HDMI":
-            subprocess.Popen(
-                [self.ddcutil, "setvcp", self.ddcutil_brightness_code,
-                 "--bus", self.ddcutil_detected_bus, str(level)]
-            )
-        elif self.device_interface == "DSI":
-            level = int(level * 255 / 100)  # DSI goes from 0 to 255, HDMI from o to 100
-            subprocess.call(
-                f"echo {level} > /sys/class/backlight/rpi_backlight/brightness", shell=True
-            )
-
-        LOG.info(f"Brightness level set to {level}")
-        self._brightness_level = level
-        self.bus.emit(Message("phal.brightness.control.auto.dim.update",
-                              {"brightness": level}))
-
-    def handle_set_brightness(self, message: Message):
+    def handle_sync_brightness(self, message: Message):
         """
         Handle the 'set brightness' event from the message bus.
 
         Args:
             message: The message received from the bus.
         """
-        LOG.debug("Setting brightness level from bus")
         level = message.data.get("brightness", "")
-
-        percent_level = 100 * float(level)
-        if float(level) < 0:
-            apply_level = 0
-        elif float(level) > 100:
-            apply_level = 100
-        else:
-            apply_level = round(percent_level / 10) * 10
-
-        self.set_brightness(apply_level)
+        LOG.debug(f"brightness level update: {level}")
+        self._brightness_level = level
 
     @property
     def auto_dim_enabled(self) -> bool:
@@ -214,18 +127,12 @@ class BrightnessManager:
         Returns:
             bool: True if auto-dim is enabled, False otherwise.
         """
-        if self.device_interface is None:
-            return False
         return self.config.get("auto_dim", True)
 
     def start_auto_dim(self, nightmode: bool = False):
         """
         Start the auto-dim functionality.
         """
-        if self.device_interface is None:
-            LOG.error("brightness control interface not available, auto-dim functionality forcefully disabled")
-            return
-
         if nightmode:
             LOG.info("Nightmode: Auto Dim enabled until sunrise")
         else:
@@ -420,6 +327,7 @@ class BrightnessManager:
 
         # auto determine sunrise/sunset
         if sunrise_time is None or sunset_time is None:
+            LOG.info("Determining sunset/sunrise times")
             location = Configuration()["location"]
             lat = location["coordinate"]["latitude"]
             lon = location["coordinate"]["longitude"]
