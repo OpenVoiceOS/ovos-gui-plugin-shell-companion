@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.0.1a7](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/0.0.1a7) (2024-09-11)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/0.0.1a6...0.0.1a7)
+
+**Fixed bugs:**
+
+- drop .config/OvosDisplay.conf [\#30](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/issues/30)
+
+**Closed issues:**
+
+- Neon.yaml being over-written [\#29](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/issues/29)
+
+**Merged pull requests:**
+
+- semver [\#33](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/33) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.1a6](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/0.0.1a6) (2024-06-13)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/0.0.1a5...0.0.1a6)
