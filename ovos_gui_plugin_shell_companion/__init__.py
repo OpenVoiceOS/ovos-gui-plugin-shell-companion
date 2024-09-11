@@ -4,8 +4,7 @@ from os.path import join, dirname
 from ovos_bus_client.client import MessageBusClient
 from ovos_bus_client import Message
 from ovos_utils import network_utils
-from ovos_utils.fingerprinting import get_mycroft_version
-from ovos_utils.gui import GUIInterface
+from ovos_bus_client.apis.gui import GUIInterface
 from ovos_utils.log import LOG
 from ovos_config.config import Configuration
 
@@ -76,9 +75,8 @@ class OVOSShellCompanionExtension(GUIExtension):
         self.gui.register_handler("mycroft.device.settings.factory", self.handle_device_display_factory)
 
         # Display settings
-        self.gui.register_handler("speaker.extension.display.set.wallpaper.rotation",
-                                  self.handle_display_wallpaper_rotation_config_set)
-        self.gui.register_handler("speaker.extension.display.set.auto.dim", self.handle_display_auto_dim_config_set)
+        self.gui.register_handler("speaker.extension.display.set.auto.dim",
+                                  self.handle_display_auto_dim_config_set)
         self.gui.register_handler("speaker.extension.display.set.auto.nightmode",
                                   self.handle_display_auto_nightmode_config_set)
 
@@ -143,7 +141,7 @@ class OVOSShellCompanionExtension(GUIExtension):
     def handle_device_display_settings(self, message):
         LOG.debug(f"Display settings: {self.local_display_config}")
         self.gui['state'] = 'settings/display_settings'
-        self.gui['display_wallpaper_rotation'] = self.local_display_config.get("wallpaper_rotation", False)
+        # wallpaper_rotation data is determined via Messagebus in Qt directly
         self.gui['display_auto_dim'] = self.local_display_config.get("auto_dim", False)
         self.gui['display_auto_nightmode'] = self.local_display_config.get("auto_nightmode", False)
         self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
@@ -155,12 +153,6 @@ class OVOSShellCompanionExtension(GUIExtension):
         self.gui['state'] = 'settings/about_page'
         self.gui['system_info'] = system_information
         self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
-
-    def handle_display_wallpaper_rotation_config_set(self, message):
-        wallpaper_rotation = message.data.get("wallpaper_rotation", False)
-        self.local_display_config["wallpaper_rotation"] = wallpaper_rotation
-        self.local_display_config.store()
-        self.bus.emit(Message("speaker.extension.display.wallpaper.rotation.changed"))
 
     def handle_display_auto_dim_config_set(self, message):
         auto_dim = message.data.get("auto_dim", False)
@@ -190,7 +182,10 @@ class OVOSShellCompanionExtension(GUIExtension):
 
     def build_initial_about_page_data(self):
         uname_info = platform.uname()
-        version = get_mycroft_version() or "unknown"
+        try:
+            from ovos_core.version import OVOS_VERSION_STR as version
+        except ImportError:
+            version = "unknown"
         self.about_page_data.append({"display_key": "Kernel Version", "display_value": uname_info[2]})
         self.about_page_data.append({"display_key": "Core Version", "display_value": version})
         self.about_page_data.append({"display_key": "Python Version", "display_value": platform.python_version()})

@@ -33,12 +33,12 @@ Item {
     property bool menuLabelsEnabled: false
 
     function getAutoRotation() {
-        Mycroft.MycroftController.sendRequest("ovos.wallpaper.manager.get.auto.rotation", {})
+        Mycroft.MycroftController.sendRequest("ovos.wallpaper.manager.get.auto.rotation", {}, {"session": {"session_id": "default"}})
     }
 
     Component.onCompleted: {
         getAutoRotation()
-        Mycroft.MycroftController.sendRequest("ovos.shell.get.menuLabels.status", {})
+        Mycroft.MycroftController.sendRequest("ovos.shell.get.menuLabels.status", {}, {"session": {"session_id": "default"}})
     }
 
     Connections {
@@ -161,7 +161,12 @@ Item {
                     onClicked: {
                         console.log(autoWallpaperRotationSwitch.checked)
                         Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
-                        triggerGuiEvent("speaker.extension.display.set.wallpaper.rotation", {"wallpaper_rotation": autoWallpaperRotationSwitch.checked})
+                        if (autoWallpaperRotationSwitch.checked === true) {
+                            Mycroft.MycroftController.sendRequest("ovos.wallpaper.manager.enable.auto.rotation", {}, {"session": {"session_id": "default"}})
+                        }
+                        else {
+                            Mycroft.MycroftController.sendRequest("ovos.wallpaper.manager.disable.auto.rotation", {}, {"session": {"session_id": "default"}})
+                        }
                     }
                 }
             }
@@ -365,7 +370,7 @@ Item {
                     onClicked: {
                         console.log(displayMenuLabelsSwitch.checked)
                         Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../snd/clicked.wav"))
-                        Mycroft.MycroftController.sendRequest("ovos.shell.set.menuLabels", {"enabled": displayMenuLabelsSwitch.checked})
+                        Mycroft.MycroftController.sendRequest("ovos.shell.set.menuLabels", {"enabled": displayMenuLabelsSwitch.checked}, {"session": {"session_id": "default"}})
                     }
                 }
             }

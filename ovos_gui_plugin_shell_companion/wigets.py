@@ -55,7 +55,7 @@ class WidgetManager:
             "action": message.data.get("action", ""),
             "type": message.data.get("type", ""),
             "style": message.data.get("style", "info"),
-            "callback_data": message.data.get("callback_data", {}),
+            "callback_data": message.data.get("callback_data") or dict(),
             "timestamp": time.time()
         }
         if notification_message not in self.__notificationAPI_notifications_model:
@@ -84,8 +84,12 @@ class WidgetManager:
         self.bus.emit(Message("ovos.notification.controlled.type.remove"))
 
     def __notificationAPI_handle_clear_notification_data(self, message):
-        """ Clear Pop Notification """
+        """ Clear Pop Notification & Put In Storage """
         notification_data = message.data.get("notification", "")
+        if not notification_data or \
+                notification_data in self.__notificationAPI_notifications_storage_model:
+            LOG.debug(f"Empty or duplicate notification data, dropped: {notification_data}")
+            return
         self.__notificationAPI_notifications_storage_model.append(
             notification_data)
         for i in range(len(self.__notificationAPI_notifications_model)):
@@ -93,11 +97,7 @@ class WidgetManager:
                     self.__notificationAPI_notifications_model[i]["sender"] == notification_data["sender"]
                     and self.__notificationAPI_notifications_model[i]["text"] == notification_data["text"]
             ):
-                if not len(self.__notificationAPI_notifications_model) > 0:
-                    del self.__notificationAPI_notifications_model[i]
-                    self.__notificationAPI_notifications_model = []
-                else:
-                    del self.__notificationAPI_notifications_model[i]
+                del self.__notificationAPI_notifications_model[i]
                 break
         self.notificationAPI_update_storage_model()
         self.bus.emit(Message("ovos.notification.notification_data",
@@ -105,20 +105,19 @@ class WidgetManager:
 
     def __notificationAPI_handle_clear_delete_notification_data(self, message):
         """ Clear Pop Notification & Delete Notification data """
+        notification_data = message.data.get("notification", "")
+        if not notification_data:
+            LOG.debug(f"Empty notification data, dropped: {notification_data}")
+            return
         LOG.info(
             "Notification API: Clear Pop Notification & Delete Notification data")
-        notification_data = message.data.get("notification", "")
 
         for i in range(len(self.__notificationAPI_notifications_model)):
             if (
                     self.__notificationAPI_notifications_model[i]["sender"] == notification_data["sender"]
                     and self.__notificationAPI_notifications_model[i]["text"] == notification_data["text"]
             ):
-                if not len(self.__notificationAPI_notifications_model) > 0:
-                    del self.__notificationAPI_notifications_model[i]
-                    self.__notificationAPI_notifications_model = []
-                else:
-                    del self.__notificationAPI_notifications_model[i]
+                del self.__notificationAPI_notifications_model[i]
                 break
 
     def __notificationAPI_handle_clear_notification_storage(self, _):
@@ -129,9 +128,12 @@ class WidgetManager:
     def __notificationAPI_handle_clear_notification_storage_item(
             self, message):
         """ Clear Single Item From Notification Storage Model """
+        notification_data = message.data.get("notification", "")
+        if not notification_data:
+            LOG.debug(f"Empty notification data, dropped: {notification_data}")
+            return
         LOG.info(
             "Notification API: Clear Single Item From Notification Storage Model")
-        notification_data = message.data.get("notification", "")
         for i in range(
                 len(self.__notificationAPI_notifications_storage_model)):
             if (

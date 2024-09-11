@@ -1,11 +1,9 @@
 import datetime
-import platform
 import subprocess
 import threading
 import time
+import shutil
 from datetime import timedelta
-from distutils.spawn import find_executable
-from os.path import isfile
 from astral import LocationInfo
 from astral.sun import sun
 from ovos_bus_client import Message
@@ -23,6 +21,8 @@ class BrightnessManager:
         self.event_scheduler.set_id("ovos-shell")
         self.event_scheduler.set_bus(self.bus)
         self.device_interface = "DSI"
+        self.vcgencmd = shutil.which("vcgencmd")
+        self.ddcutil = shutil.which("ddcutil")
         self.ddcutil_detected_bus = None
         self.ddcutil_brightness_code = None
         self.auto_dim_enabled = False
@@ -47,21 +47,6 @@ class BrightnessManager:
         self.bus.on("recognizer_loop:wakeword", self.undim_display)
         self.bus.on("recognizer_loop:record_begin", self.undim_display)
 
-    def init_event_scheduler(self):
-        self.event_scheduler = EventSchedulerInterface()
-        self.event_scheduler.set_id(self.name)
-        self.event_scheduler.set_bus(self.bus)
-
-    @staticmethod
-    def validate():
-        if not platform.machine().startswith("arm"):
-            return False
-        # check if needed utils installed
-        vcgencmd = find_executable("vcgencmd") or isfile("/opt/vc/bin/vcgencmd")
-        ddcutil = find_executable("ddcutil") or isfile("/usr/bin/ddcutil")
-        if not (vcgencmd or ddcutil):
-            return False
-
     #### brightness manager - TODO generic non rpi support
     # Check if the auto dim is enabled
     def is_auto_dim_enabled(self, message=None):
@@ -77,9 +62,9 @@ class BrightnessManager:
     def discover(self):
         try:
             LOG.info("Discovering brightness control device interface")
-            proc = subprocess.Popen(["/opt/vc/bin/vcgencmd",
+            proc = subprocess.Popen([self.vcgencmd,
                                      "get_config", "display_default_lcd"], stdout=subprocess.PIPE)
-            if proc.stdout.read().decode("utf-8").strip() == "1":
+            if proc.stdout.read().decode("utf-8").strip() in ('1', 'display_default_lcd=1'):
                 self.device_interface = "DSI"
             else:
                 self.device_interface = "HDMI"
@@ -88,7 +73,7 @@ class BrightnessManager:
 
             if self.device_interface == "HDMI":
                 proc_detect = subprocess.Popen(
-                    ["/usr/bin/ddcutil", "detect"], stdout=subprocess.PIPE)
+                    [self.ddcutil, "detect"], stdout=subprocess.PIPE)
 
                 ddcutil_detected_output = proc_detect.stdout.read().decode("utf-8")
                 if "I2C bus:" in ddcutil_detected_output:
@@ -101,7 +86,7 @@ class BrightnessManager:
 
                 if self.ddcutil_detected_bus:
                     proc_fetch_vcp = subprocess.Popen(
-                        ["/usr/bin/ddcutil", "getvcp", "known", "--bus", self.ddcutil_detected_bus],
+                        [self.ddcutil, "getvcp", "known", "--bus", self.ddcutil_detected_bus],
                         stdout=subprocess.PIPE)
                     # check the vcp output for the Brightness string and get its VCP code
                     for line in proc_fetch_vcp.stdout:
@@ -119,7 +104,7 @@ class BrightnessManager:
         LOG.info("Getting current brightness level")
         if self.device_interface == "HDMI":
             proc_fetch_vcp = subprocess.Popen(
-                ["/usr/bin/ddcutil", "getvcp", self.ddcutil_brightness_code, "--bus", self.ddcutil_detected_bus],
+                [self.ddcutil, "getvcp", self.ddcutil_brightness_code, "--bus", self.ddcutil_detected_bus],
                 stdout=subprocess.PIPE)
             for line in proc_fetch_vcp.stdout:
                 if "current value" in line.decode("utf-8"):
@@ -149,7 +134,7 @@ class BrightnessManager:
     def set_brightness(self, level):
         LOG.debug("Setting brightness level")
         if self.device_interface == "HDMI":
-            subprocess.Popen(["/usr/bin/ddcutil", "setvcp", self.ddcutil_brightness_code,
+            subprocess.Popen([self.ddcutil, "setvcp", self.ddcutil_brightness_code,
                               "--bus", self.ddcutil_detected_bus, str(level)])
         elif self.device_interface == "DSI":
             subprocess.call(
