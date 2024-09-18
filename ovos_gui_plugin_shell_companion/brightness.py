@@ -115,9 +115,12 @@ class BrightnessManager:
         Args:
             message: The message received from the bus.
         """
-        level = message.data.get("brightness", "")
+        level = message.data.get("brightness", 100)
         LOG.debug(f"brightness level update: {level}")
-        self._brightness_level = level
+        self._brightness_level = int(level)
+        if message.data.get("make_default") and level != self.default_brightness:
+            self.default_brightness = level
+            LOG.info(f"new brightness default level: {level}")
 
     @property
     def auto_dim_enabled(self) -> bool:
