@@ -249,8 +249,9 @@ class BrightnessManager:
         Start the auto night mode functionality.
         """
         LOG.debug("Starting auto night mode")
-        self.config["auto_nightmode"] = True
-        update_config("auto_nightmode", True)
+        if not self.config.get("auto_nightmode"):
+            self.config["auto_nightmode"] = True
+            update_config("auto_nightmode", True)
 
         if self.is_night:
             self.handle_sunset()
