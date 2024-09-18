@@ -62,10 +62,6 @@ class BrightnessManager:
             sunset = self.config.get("sunset_time", "auto")
             LOG.debug(f"sunrise set by user - {sunrise}")
             LOG.debug(f"sunset set by user - {sunset}")
-            if sunrise == "auto" or sunset == "auto":
-                self.sunrise_time, self.sunset_time = self.get_suntimes()
-                LOG.debug(f"sunrise time - {self.sunrise_time}")
-                LOG.debug(f"sunset time - {self.sunset_time}")
             self.start_auto_night_mode()
         if self.auto_dim_enabled:
             LOG.debug("Starting auto dim on launch")
@@ -234,8 +230,19 @@ class BrightnessManager:
 
     @property
     def is_night(self) -> bool:
-        self.sunrise_time, self.sunset_time = self.get_suntimes()  # sync
-        return self.sunset_time <= now_local() < self.sunrise_time
+        # next events, guaranteed to be both in **the future**
+        self.sunrise_time, self.sunset_time = self.get_suntimes()
+
+        # it is daytime if the sun sets today and rises tomorrow
+        # n = now_local()
+        # is_day = self.sunset_time.day == n.day and self.sunrise_time.day > n.day
+
+        # is_day = self.sunset_time.day != self.sunrise_time.day
+        # return not is_day
+
+        # before midnight -> both are next day
+        # after midnight -> both are current day
+        return self.sunset_time.day == self.sunrise_time.day
 
     def start_auto_night_mode(self):
         """
@@ -340,7 +347,7 @@ class BrightnessManager:
 
         # auto determine sunrise/sunset
         if sunrise_time is None or sunset_time is None:
-            LOG.info("Determining sunset/sunrise times")
+            LOG.debug("Determining sunset/sunrise times")
             try:
                 location = Configuration()["location"]
                 lat = location["coordinate"]["latitude"]
