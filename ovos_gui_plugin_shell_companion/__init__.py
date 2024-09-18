@@ -1,19 +1,18 @@
 import platform
-
 from os.path import join, dirname
-from ovos_bus_client.client import MessageBusClient
+
 from ovos_bus_client import Message
-from ovos_utils import network_utils
 from ovos_bus_client.apis.gui import GUIInterface
-from ovos_utils.log import LOG
+from ovos_bus_client.client import MessageBusClient
 from ovos_config.config import Configuration
+from ovos_plugin_manager.templates.gui import GUIExtension
+from ovos_utils import network_utils
+from ovos_utils.log import LOG
 
 from ovos_gui_plugin_shell_companion.brightness import BrightnessManager
 from ovos_gui_plugin_shell_companion.color_manager import ColorManager
-from ovos_gui_plugin_shell_companion.config import get_ovos_shell_config
-from ovos_gui_plugin_shell_companion.cui import ConfigUIManager
+from ovos_gui_plugin_shell_companion.helpers import ConfigUIManager
 from ovos_gui_plugin_shell_companion.wigets import WidgetManager
-from ovos_plugin_manager.templates.gui import GUIExtension
 
 
 class OVOSShellCompanionExtension(GUIExtension):
@@ -44,13 +43,12 @@ class OVOSShellCompanionExtension(GUIExtension):
         LOG.info("OVOS Shell: Initializing")
         super().__init__(config=config, bus=bus, gui=gui,
                          preload_gui=preload_gui, permanent=permanent)
-        self.local_display_config = get_ovos_shell_config()
         self.about_page_data = []
         self.build_initial_about_page_data()
 
         self.color_manager = ColorManager(self.bus)
         self.widgets = WidgetManager(self.bus)
-        self.bright = BrightnessManager(self.bus)
+        self.bright = BrightnessManager(self.bus, self.config)
         self.cui = ConfigUIManager(self.bus)
 
     def register_bus_events(self):
@@ -81,7 +79,7 @@ class OVOSShellCompanionExtension(GUIExtension):
                                   self.handle_display_auto_nightmode_config_set)
 
     def handle_remove_namespace(self, message):
-        LOG.info("Got Clear Namespace Event In Skill")
+        LOG.debug("Clearing namespace (mycroft.gui.screen.close)")
         get_skill_namespace = message.data.get("skill_id", "")
         if get_skill_namespace:
             self.bus.emit(Message("gui.clear.namespace",
@@ -139,11 +137,11 @@ class OVOSShellCompanionExtension(GUIExtension):
         self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
 
     def handle_device_display_settings(self, message):
-        LOG.debug(f"Display settings: {self.local_display_config}")
+        LOG.debug(f"Display settings: {self.config}")
         self.gui['state'] = 'settings/display_settings'
         # wallpaper_rotation data is determined via Messagebus in Qt directly
-        self.gui['display_auto_dim'] = self.local_display_config.get("auto_dim", False)
-        self.gui['display_auto_nightmode'] = self.local_display_config.get("auto_nightmode", False)
+        self.gui['display_auto_dim'] = self.config.get("auto_dim", False)
+        self.gui['display_auto_nightmode'] = self.config.get("auto_nightmode", False)
         self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
 
     def handle_device_about_page(self, message):
@@ -156,15 +154,17 @@ class OVOSShellCompanionExtension(GUIExtension):
 
     def handle_display_auto_dim_config_set(self, message):
         auto_dim = message.data.get("auto_dim", False)
-        self.local_display_config["auto_dim"] = auto_dim
-        self.local_display_config.store()
-        self.bus.emit(Message("speaker.extension.display.auto.dim.changed"))
+        if auto_dim:
+            self.bright.start_auto_dim()
+        else:
+            self.bright.stop_auto_dim()
 
     def handle_display_auto_nightmode_config_set(self, message):
         auto_nightmode = message.data.get("auto_nightmode", False)
-        self.local_display_config["auto_nightmode"] = auto_nightmode
-        self.local_display_config.store()
-        self.bus.emit(Message("speaker.extension.display.auto.nightmode.changed"))
+        if auto_nightmode:
+            self.bright.start_auto_night_mode()
+        else:
+            self.bright.stop_auto_night_mode()
 
     def display_advanced_config_for_group(self, message=None):
         group_meta = message.data.get("settingsMetaData")

@@ -1,9 +1,8 @@
 import datetime
-import subprocess
 import threading
-import time
-import shutil
 from datetime import timedelta
+from typing import Optional, Tuple
+
 from astral import LocationInfo
 from astral.sun import sun
 from ovos_bus_client import Message
@@ -11,257 +10,379 @@ from ovos_config import Configuration
 from ovos_utils.events import EventSchedulerInterface
 from ovos_utils.log import LOG
 from ovos_utils.time import now_local
-from ovos_gui_plugin_shell_companion.config import get_ovos_shell_config
+
+from ovos_gui_plugin_shell_companion.helpers import update_config
 
 
 class BrightnessManager:
-    def __init__(self, bus):
+    """ovos-shell has a fake brightness setting, it will dim the QML itself, not control the screen
+
+    ovos-shell slider: https://github.com/OpenVoiceOS/ovos-shell/blob/master/application/qml/panel/quicksettings/BrightnessSlider.qml
+        - emitted bus event from shell slider: "phal.brightness.control.set", {"brightness": fixedValue}
+        - to update slider externally: "phal.brightness.control.auto.dim.update"/"phal.brightness.control.get.response", {"brightness": fixedValue}
+    """
+
+    def __init__(self, bus, config: dict):
+        """
+        Initialize the BrightnessManager.
+
+        Args:
+            bus: Message bus for inter-process communication.
+            config: Configuration dictionary for brightness settings.
+        """
+        self._lock = threading.RLock()
         self.bus = bus
+        self.config = config
         self.event_scheduler = EventSchedulerInterface()
         self.event_scheduler.set_id("ovos-shell")
         self.event_scheduler.set_bus(self.bus)
-        self.device_interface = "DSI"
-        self.vcgencmd = shutil.which("vcgencmd")
-        self.ddcutil = shutil.which("ddcutil")
-        self.ddcutil_detected_bus = None
-        self.ddcutil_brightness_code = None
-        self.auto_dim_enabled = False
-        self.auto_night_mode_enabled = False
-        self.timer_thread = None  # TODO - use event scheduler too
 
-        self.sunset_time = None
-        self.sunrise_time = None
-        self.get_sunset_time()
+        self.fake_brightness = not self.config.get("external_plugin", False)  # allow delegating to external PHAL plugin
+        self.default_brightness = self.config.get("default_brightness", 100)
+        self._brightness_level: int = self.default_brightness
+        self.sunrise_time, self.sunset_time = None, None
 
-        self.is_auto_dim_enabled()
-        self.is_auto_night_mode_enabled()
+        self.bus.on("phal.brightness.control.get", self.handle_get_brightness)
+        self.bus.on("phal.brightness.control.set", self.handle_sync_brightness)  # from external PHAL plugin
+        self.bus.on("phal.brightness.control.sync", self.handle_sync_brightness)  # from GUI slider
 
-        self.discover()
+        self.bus.on("gui.page_interaction", self.handle_undim_screen)
+        self.bus.on("gui.page_gained_focus", self.handle_undim_screen)
+        self.bus.on("recognizer_loop:wakeword", self.handle_undim_screen)
+        self.bus.on("recognizer_loop:record_begin", self.handle_undim_screen)
 
-        self.bus.on("phal.brightness.control.get", self.query_current_brightness)
-        self.bus.on("phal.brightness.control.set", self.set_brightness_from_bus)
-        self.bus.on("speaker.extension.display.auto.dim.changed", self.is_auto_dim_enabled)
-        self.bus.on("speaker.extension.display.auto.nightmode.changed", self.is_auto_night_mode_enabled)
-        self.bus.on("gui.page_interaction", self.undim_display)
-        self.bus.on("gui.page_gained_focus", self.undim_display)
-        self.bus.on("recognizer_loop:wakeword", self.undim_display)
-        self.bus.on("recognizer_loop:record_begin", self.undim_display)
+        self.start()
 
-    #### brightness manager - TODO generic non rpi support
-    # Check if the auto dim is enabled
-    def is_auto_dim_enabled(self, message=None):
-        LOG.debug("Checking if auto dim is enabled")
-        display_config = get_ovos_shell_config()
-        self.auto_dim_enabled = display_config.get("auto_dim", False)
+    def start(self):
+        LOG.info(f"auto dim enabled: {self.auto_dim_enabled}")
+        LOG.info(f"auto night mode enabled: {self.auto_night_mode_enabled}")
+        if self.auto_night_mode_enabled:
+            LOG.debug("Starting auto night mode on launch")
+            sunrise = self.config.get("sunrise_time", "auto")
+            sunset = self.config.get("sunset_time", "auto")
+            LOG.debug(f"sunrise set by user - {sunrise}")
+            LOG.debug(f"sunset set by user - {sunset}")
+            self.start_auto_night_mode()
         if self.auto_dim_enabled:
+            LOG.debug("Starting auto dim on launch")
             self.start_auto_dim()
-        else:
-            self.stop_auto_dim()
 
-    # Discover the brightness control device interface (HDMI / DSI) on the Raspberry PI
-    def discover(self):
-        try:
-            LOG.info("Discovering brightness control device interface")
-            proc = subprocess.Popen([self.vcgencmd,
-                                     "get_config", "display_default_lcd"], stdout=subprocess.PIPE)
-            if proc.stdout.read().decode("utf-8").strip() in ('1', 'display_default_lcd=1'):
-                self.device_interface = "DSI"
-            else:
-                self.device_interface = "HDMI"
-            LOG.info("Brightness control device interface is {}".format(
-                self.device_interface))
+    ##############################################
+    # brightness manager
+    # TODO - allow dynamic brightness based on camera, reacting live to brightness,
+    def set_brightness(self, level: int):
+        """
+        Set the brightness level.
 
-            if self.device_interface == "HDMI":
-                proc_detect = subprocess.Popen(
-                    [self.ddcutil, "detect"], stdout=subprocess.PIPE)
+        Args:
+            level: Brightness level to set.
+        """
+        with self._lock:  # use a lock so this doesnt fire multiple times
+            level = int(level)
+            if level == self._brightness_level:
+                return  # avoid log spam
+            LOG.info(f"Brightness level set to {level}")
+            self._brightness_level = level
 
-                ddcutil_detected_output = proc_detect.stdout.read().decode("utf-8")
-                if "I2C bus:" in ddcutil_detected_output:
-                    bus_code = ddcutil_detected_output.split(
-                        "I2C bus: ")[1].strip().split("\n")[0]
-                    self.ddcutil_detected_bus = bus_code.split("-")[1].strip()
-                else:
-                    ddcutil_detected_bus = None
-                    LOG.error("Display is not detected by DDCUTIL")
+            if self.fake_brightness:
+                LOG.debug("delegating brightness change to ovos-shell fake brightness")
+                # ovos-shell will apply fake brightness
+                self.bus.emit(Message("phal.brightness.control.auto.dim.update",
+                                      {"brightness": level}))
+            else:  # will NOT update ovos-shell slider
+                LOG.debug("delegating brightness change to external plugin")
+                self.bus.emit(Message("phal.brightness.control.set",
+                                      {"brightness": level}))
+                # sync GUI slider by reporting new value
+                self.bus.emit(Message("phal.brightness.control.get.response",
+                                      {"brightness": level}))
 
-                if self.ddcutil_detected_bus:
-                    proc_fetch_vcp = subprocess.Popen(
-                        [self.ddcutil, "getvcp", "known", "--bus", self.ddcutil_detected_bus],
-                        stdout=subprocess.PIPE)
-                    # check the vcp output for the Brightness string and get its VCP code
-                    for line in proc_fetch_vcp.stdout:
-                        if "Brightness" in line.decode("utf-8"):
-                            self.ddcutil_brightness_code = line.decode(
-                                "utf-8").split(" ")[2].strip()
-        except Exception as e:
-            LOG.error(e)
-            LOG.info("Falling back to DSI interface")
-            self.device_interface = "DSI"
+    def handle_get_brightness(self, message: Message):
+        """
+        Handle the 'get brightness' event from the message bus.
 
-        # Get the current brightness level
+        Args:
+            message: The message received from the bus.
+        """
+        if not self.fake_brightness:
+            # let external PHAL plugin handle it
+            return
+        self.bus.emit(message.response(data={"brightness": self._brightness_level}))
 
-    def get_brightness(self):
-        LOG.info("Getting current brightness level")
-        if self.device_interface == "HDMI":
-            proc_fetch_vcp = subprocess.Popen(
-                [self.ddcutil, "getvcp", self.ddcutil_brightness_code, "--bus", self.ddcutil_detected_bus],
-                stdout=subprocess.PIPE)
-            for line in proc_fetch_vcp.stdout:
-                if "current value" in line.decode("utf-8"):
-                    brightness_level = line.decode(
-                        "utf-8").split("current value = ")[1].split(",")[0].strip()
-                    return int(brightness_level)
+    def handle_sync_brightness(self, message: Message):
+        """
+        Handle the 'set brightness' event from the message bus.
 
-        if self.device_interface == "DSI":
-            proc_fetch_vcp = subprocess.Popen(
-                ["cat", "/sys/class/backlight/rpi_backlight/actual_brightness"], stdout=subprocess.PIPE)
-            for line in proc_fetch_vcp.stdout:
-                brightness_level = line.decode("utf-8").strip()
-                return int(brightness_level)
+        Args:
+            message: The message received from the bus.
+        """
+        level = message.data.get("brightness", 100)
+        LOG.debug(f"brightness level update: {level}")
+        self._brightness_level = int(level)
+        if message.data.get("make_default") and level != self.default_brightness:
+            self.default_brightness = level
+            LOG.info(f"new brightness default level: {level}")
 
-    def query_current_brightness(self, message):
-        current_brightness = self.get_brightness()
-        if self.device_interface == "HDMI":
-            self.bus.emit(message.response(
-                data={"brightness": current_brightness}))
-        elif self.device_interface == "DSI":
-            brightness_percentage = int((current_brightness / 255) * 100)
-            self.bus.emit(message.response(
-                data={"brightness": brightness_percentage}))
+    @property
+    def auto_dim_enabled(self) -> bool:
+        """
+        Check if auto-dim is enabled.
 
-        # Set the brightness level
-
-    def set_brightness(self, level):
-        LOG.debug("Setting brightness level")
-        if self.device_interface == "HDMI":
-            subprocess.Popen([self.ddcutil, "setvcp", self.ddcutil_brightness_code,
-                              "--bus", self.ddcutil_detected_bus, str(level)])
-        elif self.device_interface == "DSI":
-            subprocess.call(
-                f"echo {level} > /sys/class/backlight/rpi_backlight/brightness", shell=True)
-
-        LOG.info("Brightness level set to {}".format(level))
-
-    def set_brightness_from_bus(self, message):
-        LOG.debug("Setting brightness level from bus")
-        level = message.data.get("brightness", "")
-
-        if self.device_interface == "HDMI":
-            percent_level = 100 * float(level)
-            if float(level) < 0:
-                apply_level = 0
-            elif float(level) > 100:
-                apply_level = 100
-            else:
-                apply_level = round(percent_level / 10) * 10
-
-            self.set_brightness(apply_level)
-
-        if self.device_interface == "DSI":
-            percent_level = 255 * float(level)
-            if float(level) < 0:
-                apply_level = 0
-            elif float(level) > 255:
-                apply_level = 255
-            else:
-                apply_level = round(percent_level / 10) * 10
-
-            self.set_brightness(apply_level)
+        Returns:
+            bool: True if auto-dim is enabled, False otherwise.
+        """
+        return self.config.get("auto_dim", False) or (self.auto_night_mode_enabled and self.is_night)
 
     def start_auto_dim(self):
-        LOG.debug("Starting auto dim")
-        self.timer_thread = threading.Thread(target=self.auto_dim_timer)
-        self.timer_thread.start()
+        """
+        Start the auto-dim functionality.
+        """
+        if not self.config.get("auto_dim"):
+            LOG.info("Nightmode: Auto Dim enabled until sunrise")
+        else:
+            LOG.info("Enabling Auto Dim")
+            self.config["auto_dim"] = True
+            update_config("auto_dim", True)
 
-    def auto_dim_timer(self):
-        while self.auto_dim_enabled:
-            time.sleep(60)
-            LOG.debug("Adjusting brightness automatically")
-            if self.device_interface == "HDMI":
-                current_brightness = 100
-            if self.device_interface == "DSI":
-                current_brightness = 255
+        # cancel any previous autodim event
+        self._cancel_next_dim()
+        # dim screen in 60 seconds
+        seconds = self.config.get("auto_dim_seconds", 60)
+        self.event_scheduler.schedule_event(self.handle_dim_screen,
+                                            when=now_local() + timedelta(seconds=seconds),
+                                            name="ovos-shell.autodim")
 
-            self.bus.emit(
-                Message("phal.brightness.control.auto.dim.update", {"brightness": 20}))
-            self.set_brightness(20)
+    def handle_dim_screen(self, message: Optional[Message] = None):
+        """
+        Handle the dimming of the screen.
+
+        Args:
+            message: Optional message received from the bus.
+        """
+        if self.auto_dim_enabled:
+            lowb = self.config.get("low_brightness", 20)
+            if self._brightness_level != lowb:
+                LOG.debug("Auto-dim: Lowering brightness")
+                self.set_brightness(lowb)
+            if self.auto_night_mode_enabled and self.is_night:
+                # show night clock in homescreen
+                LOG.debug("triggering night face clock")
+                # TODO - allow other actions, new bus event to trigger night mode
+                # dont hardcode homescreen night clock face
+                self.bus.emit(Message("phal.brightness.control.auto.night.mode.enabled"))
+
+    def _restore(self):
+        """
+        Restore the brightness level if auto-dim had reduced it.
+        """
+        if self._brightness_level < self.default_brightness:
+            LOG.debug("Auto-dim: Restoring brightness")
+            self.set_brightness(self.default_brightness)
 
     def stop_auto_dim(self):
+        """
+        Stop the auto-dim functionality.
+        """
         LOG.debug("Stopping Auto Dim")
-        self.auto_dim_enabled = False
-        if self.timer_thread:
-            self.timer_thread.join()
+        self._cancel_next_dim()
+        self._restore()
+        if self.config.get("auto_dim"):
+            self.config["auto_dim"] = False
+            update_config("auto_dim", False)
 
-    def restart_auto_dim(self):
-        LOG.debug("Restarting Auto Dim")
-        self.stop_auto_dim()
-        self.auto_dim_enabled = True
-        self.start_auto_dim()
-
-    def undim_display(self, message=None):
-        if self.auto_dim_enabled:
-            LOG.debug("Undimming display on interaction")
-            if self.device_interface == "HDMI":
-                self.set_brightness(100)
-            if self.device_interface == "DSI":
-                self.set_brightness(255)
-            self.bus.emit(
-                Message("phal.brightness.control.auto.dim.update", {"brightness": "100"}))
-            self.restart_auto_dim()
-        else:
-            pass
-
-        ##### AUTO NIGHT MODE HANDLING #####
-
-    def get_sunset_time(self, message=None):
-        LOG.debug("Getting sunset time")
-        now_time = now_local()
+    def _cancel_next_dim(self):
+        # cancel the next unfired dim event
         try:
-            location = Configuration()["location"]
-            lat = location["coordinate"]["latitude"]
-            lon = location["coordinate"]["longitude"]
-            tz = location["timezone"]["code"]
-            city = LocationInfo("Some city", "Some location", tz, lat, lon)
-            s = sun(city.observer, date=now_time)
-            self.sunset_time = s["sunset"]
-            self.sunrise_time = s["sunrise"]
-        except Exception as e:
-            LOG.exception(f"Using default times for sunrise/sunset: {e}")
-            self.sunset_time = datetime.datetime(year=now_time.year,
-                                                 month=now_time.month,
-                                                 day=now_time.day, hour=22)
-            self.sunrise_time = self.sunset_time + timedelta(hours=8)
+            time_left = self.event_scheduler.get_scheduled_event_status("ovos-shell.autodim")
+            self.event_scheduler.cancel_scheduled_event("ovos-shell.autodim")
+        except:
+            pass  # throws exception if event not registered
 
-        # check sunset times again in 24 hours
-        self.event_scheduler.schedule_event(self.get_sunset_time,
-                                            when=now_time + timedelta(hours=24),
-                                            name="ovos-shell.suntimes.check")
+    def handle_undim_screen(self, message: Optional[Message] = None):
+        """
+        Handle the undimming of the screen upon user interaction.
 
-    def start_auto_night_mode(self, message=None):
+        Args:
+            message: Optional message received from the bus.
+        """
+        if self.auto_dim_enabled:
+            self._restore()
+            self._cancel_next_dim()
+            # schedule next auto-dim
+            seconds = self.config.get("auto_dim_seconds", 60)
+            self.event_scheduler.schedule_event(self.handle_dim_screen,
+                                                when=now_local() + timedelta(seconds=seconds),
+                                                name="ovos-shell.autodim")
+
+    ##################################
+    # AUTO NIGHT MODE HANDLING
+    # TODO - allow to do it based on camera, reacting live to brightness,
+    #  instead of depending on sunset times
+    @property
+    def auto_night_mode_enabled(self) -> bool:
+        """
+        Check if auto night mode is enabled.
+
+        Returns:
+            bool: True if auto night mode is enabled, False otherwise.
+        """
+        return self.config.get("auto_nightmode", False)
+
+    @property
+    def is_night(self) -> bool:
+        # next events, guaranteed to be both in **the future**
+        self.sunrise_time, self.sunset_time = self.get_suntimes()
+
+        # it is daytime if the sun sets today and rises tomorrow
+        # n = now_local()
+        # is_day = self.sunset_time.day == n.day and self.sunrise_time.day > n.day
+
+        # is_day = self.sunset_time.day != self.sunrise_time.day
+        # return not is_day
+
+        # before midnight -> both are next day
+        # after midnight -> both are current day
+        return self.sunset_time.day == self.sunrise_time.day
+
+    def start_auto_night_mode(self):
+        """
+        Start the auto night mode functionality.
+        """
+        LOG.debug("Starting auto night mode")
+        if not self.config.get("auto_nightmode"):
+            self.config["auto_nightmode"] = True
+            update_config("auto_nightmode", True)
+
+        if self.is_night:
+            self.handle_sunset()
+        else:
+            self.handle_sunrise()
+
+    def handle_sunrise(self, message: Optional[Message] = None):
+        """
+        Handle the sunrise event for auto night mode.
+
+        Args:
+            message: Optional message received from the bus.
+        """
+        self.sunrise_time, self.sunset_time = self.get_suntimes()  # sync
         if self.auto_night_mode_enabled:
-            date = now_local()
-            self.event_scheduler.schedule_event(self.start_auto_night_mode,
-                                                when=date + timedelta(hours=1),
-                                                name="ovos-shell.night.mode.check")
-            if self.sunset_time < date < self.sunrise_time:
-                LOG.debug("It is night time")
-                self.bus.emit(Message("phal.brightness.control.auto.night.mode.enabled"))
-            else:
-                LOG.debug("It is day time")
-                # TODO - implement this message in shell / check if it exists
-                # i just made it up without checking
-                self.bus.emit(Message("phal.brightness.control.auto.night.mode.disabled"))
+            LOG.debug("It is daytime")
+            self.default_brightness = self.config.get("default_brightness", 100)
+            # reset homescreen to day mode
+            self.bus.emit(Message("ovos.homescreen.main_view.current_index.set",
+                                  {"current_index": 1}))
+
+            self.event_scheduler.schedule_event(self.handle_sunset,
+                                                when=self.sunset_time,
+                                                name="ovos-shell.sunset")
+
+            if not self.auto_dim_enabled:
+                # cancel the next unfired dim event
+                self._cancel_next_dim()
+                self._restore()
+
+    def handle_sunset(self, message: Optional[Message] = None):
+        """
+        Handle the sunset event for auto night mode.
+
+        Args:
+            message: Optional message received from the bus.
+        """
+        self.sunrise_time, self.sunset_time = self.get_suntimes()  # sync
+        if self.auto_night_mode_enabled:
+            LOG.debug("It is nighttime")
+            self.default_brightness = self.config.get("night_default_brightness", 70)
+            self.set_brightness(self.default_brightness)
+            # show night clock in homescreen
+            self.bus.emit(Message("phal.brightness.control.auto.night.mode.enabled"))
+            # equivalent to
+            # self.bus.emit(Message("ovos.homescreen.main_view.current_index.set", {"current_index": 0}))
+
+            self.event_scheduler.schedule_event(self.handle_sunrise,
+                                                when=self.sunrise_time,
+                                                name="ovos-shell.sunrise")
+            if not self.config.get("auto_dim"):
+                self.start_auto_dim()
 
     def stop_auto_night_mode(self):
-        LOG.debug("Stopping auto night mode")
-        self.auto_night_mode_enabled = False
-        self.event_scheduler.cancel_scheduled_event("ovos-shell.night.mode.check")
+        """
+        Stop the auto night mode functionality.
+        """
+        if self.config.get("auto_nightmode"):
+            LOG.debug("Stopping auto night mode")
+            self.config["auto_nightmode"] = False
+            update_config("auto_nightmode", False)
 
-    def is_auto_night_mode_enabled(self):
-        display_config = get_ovos_shell_config()
-        self.auto_night_mode_enabled = display_config.get("auto_nightmode", False)
+    def get_suntimes(self) -> Tuple[datetime.datetime, datetime.datetime]:
+        sunrise = self.config.get("sunrise_time", "auto")
+        sunset = self.config.get("sunset_time", "auto")
+        sunset_time = None
+        sunrise_time = None
 
-        if self.auto_night_mode_enabled:
-            self.start_auto_night_mode()
-        else:
-            self.stop_auto_night_mode()
+        reference = now_local()  # now_local() is tz aware
+
+        # check if sunrise has been explicitly configured by user
+        if ":" in sunrise:
+            hours, mins = sunrise.split(":")
+            sunrise_time = datetime.datetime(hour=int(hours),
+                                             minute=int(mins),
+                                             day=reference.day,
+                                             month=reference.month,
+                                             year=reference.year,
+                                             tzinfo=reference.tzinfo)
+            if reference > sunrise_time:
+                sunrise_time += timedelta(days=1)
+
+        # check if sunset has been explicitly configured by user
+        if ":" in sunset:
+            hours, mins = sunset.split(":")
+            sunset_time = datetime.datetime(hour=int(hours),
+                                            minute=int(mins),
+                                            day=reference.day,
+                                            month=reference.month,
+                                            year=reference.year,
+                                            tzinfo=reference.tzinfo)
+            if reference > sunset_time:
+                sunset_time += timedelta(days=1)
+
+        # auto determine sunrise/sunset
+        if sunrise_time is None or sunset_time is None:
+            LOG.debug("Determining sunset/sunrise times")
+            try:
+                location = Configuration()["location"]
+                lat = location["coordinate"]["latitude"]
+                lon = location["coordinate"]["longitude"]
+                tz = location["timezone"]["code"]
+                city = LocationInfo("Some city", "Some location", tz, lat, lon)
+
+                s = sun(city.observer, date=reference)
+                s2 = sun(city.observer, date=reference + timedelta(days=1))
+                if not sunset_time:
+                    sunset_time = s["sunset"]
+                    if reference > sunset_time:  # get next sunset, today's already happened
+                        sunset_time = s2["sunset"]
+                if not sunrise_time:
+                    sunrise_time = s["sunrise"]
+                    if reference > sunrise_time:  # get next sunrise, today's already happened
+                        sunrise_time = s2["sunrise"]
+            except:
+                LOG.exception("Failed to calculate suntimes! defaulting to 06:30 and 20:30")
+                if reference.hour > 7:
+                    self.sunrise_time = datetime.datetime(hour=6, minute=30, month=reference.month,
+                                                          day=reference.day + 1, year=reference.year)
+                else:
+                    self.sunrise_time = datetime.datetime(hour=6, minute=30, month=reference.month,
+                                                          day=reference.day, year=reference.year)
+                if reference.hour < 21:
+                    self.sunset_time = datetime.datetime(hour=22, minute=30, month=reference.month,
+                                                         day=reference.day, year=reference.year)
+                else:
+                    self.sunset_time = datetime.datetime(hour=22, minute=30, month=reference.month,
+                                                         day=reference.day + 1, year=reference.year)
+        # info logs
+        if self.sunrise_time is None or self.sunrise_time != sunrise_time:
+            LOG.info(f"Sunrise time: {sunrise_time}")
+        if self.sunset_time is None or self.sunset_time != sunset_time:
+            LOG.info(f"Sunset time: {sunset_time}")
+        return sunrise_time, sunset_time

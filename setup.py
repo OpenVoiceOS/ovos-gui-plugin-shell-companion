@@ -65,7 +65,6 @@ setup(
     long_description_content_type="text/markdown",
     url='https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion',
     author='Aiix',
-    author_email='aix.m@outlook.com',
     license='Apache-2.0',
     packages=['ovos_gui_plugin_shell_companion'],
     package_data={'': package_files('ovos_gui_plugin_shell_companion')},
