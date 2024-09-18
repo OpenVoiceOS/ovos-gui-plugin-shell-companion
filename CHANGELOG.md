@@ -1,74 +1,22 @@
 # Changelog
 
-## [0.0.1a7](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/0.0.1a7) (2024-09-11)
+## [1.0.0a1](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/1.0.0a1) (2024-09-18)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/0.0.1a6...0.0.1a7)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/0.0.1...1.0.0a1)
+
+**Breaking changes:**
+
+- fix!:trigger build [\#35](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/35) ([JarbasAl](https://github.com/JarbasAl))
+- bug/fix everything around brightness/nightmode... [\#31](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/31) ([JarbasAl](https://github.com/JarbasAl))
 
 **Fixed bugs:**
 
-- drop .config/OvosDisplay.conf [\#30](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/issues/30)
+- get rid of OvosDisplay.conf [\#26](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/issues/26)
 
 **Closed issues:**
 
-- Neon.yaml being over-written [\#29](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/issues/29)
-
-**Merged pull requests:**
-
-- semver [\#33](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/33) ([JarbasAl](https://github.com/JarbasAl))
-
-## [0.0.1a6](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/0.0.1a6) (2024-06-13)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/0.0.1a5...0.0.1a6)
-
-**Fixed bugs:**
-
-- \[BUG\] Wallpaper\(s\) are not being rotated through [\#27](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/issues/27)
-- Update wallpaper rotation to handle changes from GUI [\#25](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/25) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [0.0.1a5](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/0.0.1a5) (2024-01-31)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/0.0.1a4...0.0.1a5)
-
-**Fixed bugs:**
-
-- fix/version\_string [\#20](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/20) ([JarbasAl](https://github.com/JarbasAl))
-
-## [0.0.1a4](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/0.0.1a4) (2024-01-03)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/0.0.1a3...0.0.1a4)
-
-**Merged pull requests:**
-
-- Remove unused methods apparently leftover from a previous implementation [\#18](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/18) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [0.0.1a3](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/0.0.1a3) (2024-01-03)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/0.0.1a2...0.0.1a3)
-
-**Fixed bugs:**
-
-- Resolve vcgencmd path errors [\#17](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/17) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [0.0.1a2](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/0.0.1a2) (2024-01-03)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/0.0.1a1...0.0.1a2)
-
-**Fixed bugs:**
-
-- vcgencmd binary not in previous location [\#12](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/issues/12)
-
-**Merged pull requests:**
-
-- check if vcgencmd and ddcutil exists [\#14](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/14) ([denics](https://github.com/denics))
-
-## [0.0.1a1](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/0.0.1a1) (2023-12-30)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/0.0.0...0.0.1a1)
-
-**Fixed bugs:**
-
-- notification gui model - weird things [\#15](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/issues/15)
-- filter notification data [\#16](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/16) ([emphasize](https://github.com/emphasize))
+- Source from PyPI not installable because of missing requirements.txt file [\#28](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/issues/28)
+- Missing vcgencmd or ddcutil [\#23](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/issues/23)
 
 
 
