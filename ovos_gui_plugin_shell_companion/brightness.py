@@ -36,8 +36,6 @@ class BrightnessManager:
         self.event_scheduler.set_id("ovos-shell")
         self.event_scheduler.set_bus(self.bus)
 
-        LOG.info(f"auto dim enabled: {self.auto_dim_enabled}")
-        LOG.info(f"auto night mode enabled: {self.auto_night_mode_enabled}")
         self.fake_brightness = not self.config.get("external_plugin", False)  # allow delegating to external PHAL plugin
         self.default_brightness = self.config.get("default_brightness", 100)
         self._brightness_level: int = self.default_brightness
@@ -55,6 +53,8 @@ class BrightnessManager:
         self.start()
 
     def start(self):
+        LOG.info(f"auto dim enabled: {self.auto_dim_enabled}")
+        LOG.info(f"auto night mode enabled: {self.auto_night_mode_enabled}")
         if self.auto_night_mode_enabled:
             LOG.debug("Starting auto night mode on launch")
             sunrise = self.config.get("sunrise_time", "auto")
