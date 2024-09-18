@@ -21,6 +21,7 @@ class BrightnessManager:
         - emitted bus event from shell slider: "phal.brightness.control.set", {"brightness": fixedValue}
         - to update slider externally: "phal.brightness.control.auto.dim.update"/"phal.brightness.control.get.response", {"brightness": fixedValue}
     """
+
     def __init__(self, bus, config: dict):
         """
         Initialize the BrightnessManager.
@@ -63,8 +64,8 @@ class BrightnessManager:
             LOG.debug(f"sunset set by user - {sunset}")
             if sunrise == "auto" or sunset == "auto":
                 self.sunrise_time, self.sunset_time = self.get_suntimes()
-                LOG.debug(f"sunrise time - {sunrise}")
-                LOG.debug(f"sunset time - {sunset}")
+                LOG.debug(f"sunrise time - {self.sunrise_time}")
+                LOG.debug(f"sunset time - {self.sunset_time}")
             self.start_auto_night_mode()
         if self.auto_dim_enabled:
             LOG.debug("Starting auto dim on launch")
@@ -189,7 +190,7 @@ class BrightnessManager:
         LOG.debug("Stopping Auto Dim")
         self._cancel_next_dim()
         self._restore()
-        if self.auto_dim_enabled and self.config.get("auto_dim"):
+        if self.config.get("auto_dim"):
             self.config["auto_dim"] = False
             update_config("auto_dim", False)
 
@@ -212,8 +213,9 @@ class BrightnessManager:
             self._restore()
             self._cancel_next_dim()
             # schedule next auto-dim
+            seconds = self.config.get("auto_dim_seconds", 60)
             self.event_scheduler.schedule_event(self.handle_dim_screen,
-                                                when=now_local() + timedelta(seconds=60),
+                                                when=now_local() + timedelta(seconds=seconds),
                                                 name="ovos-shell.autodim")
 
     ##################################
@@ -339,23 +341,37 @@ class BrightnessManager:
         # auto determine sunrise/sunset
         if sunrise_time is None or sunset_time is None:
             LOG.info("Determining sunset/sunrise times")
-            location = Configuration()["location"]
-            lat = location["coordinate"]["latitude"]
-            lon = location["coordinate"]["longitude"]
-            tz = location["timezone"]["code"]
-            city = LocationInfo("Some city", "Some location", tz, lat, lon)
+            try:
+                location = Configuration()["location"]
+                lat = location["coordinate"]["latitude"]
+                lon = location["coordinate"]["longitude"]
+                tz = location["timezone"]["code"]
+                city = LocationInfo("Some city", "Some location", tz, lat, lon)
 
-            s = sun(city.observer, date=reference)
-            s2 = sun(city.observer, date=reference + timedelta(days=1))
-            if not sunset_time:
-                sunset_time = s["sunset"]
-                if reference > sunset_time:  # get next sunset, today's already happened
-                    sunset_time = s2["sunset"]
-            if not sunrise_time:
-                sunrise_time = s["sunrise"]
-                if reference > sunrise_time:  # get next sunrise, today's already happened
-                    sunrise_time = s2["sunrise"]
-
+                s = sun(city.observer, date=reference)
+                s2 = sun(city.observer, date=reference + timedelta(days=1))
+                if not sunset_time:
+                    sunset_time = s["sunset"]
+                    if reference > sunset_time:  # get next sunset, today's already happened
+                        sunset_time = s2["sunset"]
+                if not sunrise_time:
+                    sunrise_time = s["sunrise"]
+                    if reference > sunrise_time:  # get next sunrise, today's already happened
+                        sunrise_time = s2["sunrise"]
+            except:
+                LOG.exception("Failed to calculate suntimes! defaulting to 06:30 and 20:30")
+                if reference.hour > 7:
+                    self.sunrise_time = datetime.datetime(hour=6, minute=30, month=reference.month,
+                                                          day=reference.day + 1, year=reference.year)
+                else:
+                    self.sunrise_time = datetime.datetime(hour=6, minute=30, month=reference.month,
+                                                          day=reference.day, year=reference.year)
+                if reference.hour < 21:
+                    self.sunset_time = datetime.datetime(hour=22, minute=30, month=reference.month,
+                                                         day=reference.day, year=reference.year)
+                else:
+                    self.sunset_time = datetime.datetime(hour=22, minute=30, month=reference.month,
+                                                         day=reference.day + 1, year=reference.year)
         # info logs
         if self.sunrise_time is None or self.sunrise_time != sunrise_time:
             LOG.info(f"Sunrise time: {sunrise_time}")
