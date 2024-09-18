@@ -61,6 +61,10 @@ class BrightnessManager:
             sunset = self.config.get("sunset_time", "auto")
             LOG.debug(f"sunrise set by user - {sunrise}")
             LOG.debug(f"sunset set by user - {sunset}")
+            if sunrise == "auto" or sunset == "auto":
+                self.sunrise_time, self.sunset_time = self.get_suntimes()
+                LOG.debug(f"sunrise time - {sunrise}")
+                LOG.debug(f"sunset time - {sunset}")
             self.start_auto_night_mode()
         if self.auto_dim_enabled:
             LOG.debug("Starting auto dim on launch")
