@@ -130,13 +130,13 @@ class BrightnessManager:
         Returns:
             bool: True if auto-dim is enabled, False otherwise.
         """
-        return self.config.get("auto_dim", True)
+        return self.config.get("auto_dim", False) or (self.auto_night_mode_enabled and self.is_night)
 
-    def start_auto_dim(self, nightmode: bool = False):
+    def start_auto_dim(self):
         """
         Start the auto-dim functionality.
         """
-        if nightmode:
+        if not self.config.get("auto_dim"):
             LOG.info("Nightmode: Auto Dim enabled until sunrise")
         else:
             LOG.info("Enabling Auto Dim")
@@ -165,6 +165,9 @@ class BrightnessManager:
                 self.set_brightness(lowb)
             if self.auto_night_mode_enabled and self.is_night:
                 # show night clock in homescreen
+                LOG.debug("triggering night face clock")
+                # TODO - allow other actions, new bus event to trigger night mode
+                # dont hardcode homescreen night clock face
                 self.bus.emit(Message("phal.brightness.control.auto.night.mode.enabled"))
 
     def _restore(self):
@@ -182,7 +185,7 @@ class BrightnessManager:
         LOG.debug("Stopping Auto Dim")
         self._cancel_next_dim()
         self._restore()
-        if self.auto_dim_enabled:
+        if self.auto_dim_enabled and self.config.get("auto_dim"):
             self.config["auto_dim"] = False
             update_config("auto_dim", False)
 
@@ -285,16 +288,17 @@ class BrightnessManager:
             self.event_scheduler.schedule_event(self.handle_sunrise,
                                                 when=self.sunrise_time,
                                                 name="ovos-shell.sunrise")
-            if not self.auto_dim_enabled:
-                self.start_auto_dim(nightmode=True)
+            if not self.config.get("auto_dim"):
+                self.start_auto_dim()
 
     def stop_auto_night_mode(self):
         """
         Stop the auto night mode functionality.
         """
-        LOG.debug("Stopping auto night mode")
-        self.config["auto_nightmode"] = False
-        update_config("auto_nightmode", False)
+        if self.config.get("auto_nightmode"):
+            LOG.debug("Stopping auto night mode")
+            self.config["auto_nightmode"] = False
+            update_config("auto_nightmode", False)
 
     def get_suntimes(self) -> Tuple[datetime.datetime, datetime.datetime]:
         sunrise = self.config.get("sunrise_time", "auto")
