@@ -1,18 +1,30 @@
 import platform
-from os.path import join, dirname
+from os.path import dirname
 
 from ovos_bus_client import Message
-from ovos_bus_client.apis.gui import GUIInterface
 from ovos_bus_client.client import MessageBusClient
 from ovos_config.config import Configuration
 from ovos_plugin_manager.templates.gui import GUIExtension
 from ovos_utils import network_utils
 from ovos_utils.log import LOG
+from ovos_workshop.skills.ovos import SkillGUI
 
 from ovos_gui_plugin_shell_companion.brightness import BrightnessManager
 from ovos_gui_plugin_shell_companion.color_manager import ColorManager
 from ovos_gui_plugin_shell_companion.helpers import ConfigUIManager
 from ovos_gui_plugin_shell_companion.wigets import WidgetManager
+
+
+class _FakeSkill:
+    # SkillGUI expects a OVOSSkill, we need to define
+    # self.skill_id , self.bus , self.config_core, self.root_dir
+    def __init__(self, bus):
+        self.bus = bus
+        # the skill_id is chosen so the namespace matches the regular bus api
+        # ie, the gui event "XXX" is sent in the bus as "ovos.common_play.XXX"
+        self.skill_id = "ovos_gui_plugin_shell_companion"
+        self.root_dir = f"{dirname(__file__)}/res"
+        self.config_core = Configuration()
 
 
 class OVOSShellCompanionExtension(GUIExtension):
@@ -29,17 +41,10 @@ class OVOSShellCompanionExtension(GUIExtension):
     """
 
     def __init__(self, config: dict, bus: MessageBusClient = None,
-                 gui: GUIInterface = None,
+                 gui: SkillGUI = None,
                  preload_gui=False, permanent=True):
         config["homescreen_supported"] = True
-        res_dir = join(dirname(__file__), "res")
-        gui = gui or GUIInterface("ovos_gui_plugin_shell_companion",
-                                  bus=bus, config=Configuration(),
-                                  ui_directories={"qt5": join(res_dir, "ui"),
-                                                  "qt6": join(res_dir, "ui6")})
-        if not gui.ui_directories:
-            LOG.info(f"Setting default qt5 resource directory to: {res_dir}")
-            gui.ui_directories["qt5"] = res_dir
+        gui = gui or SkillGUI(_FakeSkill(bus))
         LOG.info("OVOS Shell: Initializing")
         super().__init__(config=config, bus=bus, gui=gui,
                          preload_gui=preload_gui, permanent=permanent)
