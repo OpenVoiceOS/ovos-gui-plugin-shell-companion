@@ -1,22 +1,12 @@
 # Changelog
 
-## [1.0.0a1](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/1.0.0a1) (2024-09-18)
+## [1.0.1a1](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/1.0.1a1) (2024-11-04)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/0.0.1...1.0.0a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/1.0.0...1.0.1a1)
 
-**Breaking changes:**
+**Merged pull requests:**
 
-- fix!:trigger build [\#35](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/35) ([JarbasAl](https://github.com/JarbasAl))
-- bug/fix everything around brightness/nightmode... [\#31](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/31) ([JarbasAl](https://github.com/JarbasAl))
-
-**Fixed bugs:**
-
-- get rid of OvosDisplay.conf [\#26](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/issues/26)
-
-**Closed issues:**
-
-- Source from PyPI not installable because of missing requirements.txt file [\#28](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/issues/28)
-- Missing vcgencmd or ddcutil [\#23](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/issues/23)
+- fix: there are no QT6 res files [\#38](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/38) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
