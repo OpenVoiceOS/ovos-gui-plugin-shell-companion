@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.4a1](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/1.0.4a1) (2024-11-05)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/1.0.3a1...1.0.4a1)
+
+**Fixed bugs:**
+
+- Wallpaper Settings button doesn't open anything [\#19](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/issues/19)
+
+**Merged pull requests:**
+
+- fix: wallpaper settings [\#44](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/44) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [1.0.3a1](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/1.0.3a1) (2024-11-05)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/1.0.2...1.0.3a1)
