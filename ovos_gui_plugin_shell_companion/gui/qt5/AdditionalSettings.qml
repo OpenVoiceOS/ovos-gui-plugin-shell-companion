@@ -54,7 +54,7 @@ Mycroft.Delegate {
     }
 
     onPageToLoadChanged: {
-        console.log(sessionData.state)
+        console.log("Shell companion: " + sessionData.state)
         rootLoader.setSource(sessionData.state + ".qml")
     }
 }

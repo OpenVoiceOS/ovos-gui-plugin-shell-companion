@@ -90,7 +90,7 @@ class OVOSShellCompanionExtension(GUIExtension):
     def handle_device_settings(self, message):
         """ Display device settings page. """
         self.gui["state"] = "settings/settingspage"
-        self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
+        self.gui.show_page("AdditionalSettings", override_idle=True)
 
     def handle_device_homescreen_settings(self, message):
         """
@@ -100,14 +100,14 @@ class OVOSShellCompanionExtension(GUIExtension):
         self.gui["idleScreenList"] = {"screenBlob": screens}
         self.gui["selectedScreen"] = self.homescreen_manager.get_active_homescreen()
         self.gui["state"] = "settings/homescreen_settings"
-        self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
+        self.gui.show_page("AdditionalSettings", override_idle=True)
 
     def handle_device_ssh_settings(self, message):
         """
         display ssh settings page
         """
         self.gui["state"] = "settings/ssh_settings"
-        self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
+        self.gui.show_page("AdditionalSettings", override_idle=True)
 
     def handle_set_homescreen(self, message):
         """
@@ -125,15 +125,15 @@ class OVOSShellCompanionExtension(GUIExtension):
 
     def handle_device_customize_settings(self, message):
         self.gui['state'] = 'settings/customize_settings'
-        self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
+        self.gui.show_page("AdditionalSettings", override_idle=True)
 
     def handle_device_create_theme(self, message):
         self.gui['state'] = 'settings/customize_theme'
-        self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
+        self.gui.show_page("AdditionalSettings", override_idle=True)
 
     def handle_device_display_factory(self, message):
         self.gui['state'] = 'settings/factory_settings'
-        self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
+        self.gui.show_page("AdditionalSettings", override_idle=True)
 
     def handle_device_display_settings(self, message):
         LOG.debug(f"Display settings: {self.config}")
@@ -141,7 +141,7 @@ class OVOSShellCompanionExtension(GUIExtension):
         # wallpaper_rotation data is determined via Messagebus in Qt directly
         self.gui['display_auto_dim'] = self.config.get("auto_dim", False)
         self.gui['display_auto_nightmode'] = self.config.get("auto_nightmode", False)
-        self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
+        self.gui.show_page("AdditionalSettings", override_idle=True)
 
     def handle_device_about_page(self, message):
         # TODO: Move `system_information` generation to util method
@@ -149,7 +149,7 @@ class OVOSShellCompanionExtension(GUIExtension):
         system_information = {"display_list": self.about_page_data}
         self.gui['state'] = 'settings/about_page'
         self.gui['system_info'] = system_information
-        self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
+        self.gui.show_page("AdditionalSettings", override_idle=True)
 
     def handle_display_auto_dim_config_set(self, message):
         auto_dim = message.data.get("auto_dim", False)
@@ -171,13 +171,13 @@ class OVOSShellCompanionExtension(GUIExtension):
         self.gui["groupName"] = group_name
         self.gui["groupConfigurationData"] = group_meta
         self.gui['state'] = 'settings/configuration_generator_display'
-        self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
+        self.gui.show_page("AdditionalSettings", override_idle=True)
 
     def display_advanced_config_groups(self, message=None):
         groups_list = message.data.get("groups")
         self.gui["groupList"] = groups_list
         self.gui['state'] = 'settings/configuration_groups_display'
-        self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
+        self.gui.show_page("AdditionalSettings", override_idle=True)
 
     def build_initial_about_page_data(self):
         uname_info = platform.uname()
