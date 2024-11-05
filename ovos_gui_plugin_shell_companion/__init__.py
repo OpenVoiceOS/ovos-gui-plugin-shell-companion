@@ -145,7 +145,7 @@ class OVOSShellCompanionExtension(GUIExtension):
 
     def handle_device_wallpaper_settings(self, message):
         self.gui['state'] = 'settings/wallpaper_settings'
-        self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
+        self.gui.show_page("AdditionalSettings", override_idle=True)
 
     def handle_device_about_page(self, message):
         # TODO: Move `system_information` generation to util method
