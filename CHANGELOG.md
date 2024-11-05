@@ -1,12 +1,12 @@
 # Changelog
 
-## [1.0.2a1](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/1.0.2a1) (2024-11-05)
+## [1.0.3a1](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/1.0.3a1) (2024-11-05)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/1.0.1...1.0.2a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/1.0.2...1.0.3a1)
 
 **Merged pull requests:**
 
-- improve init and typing [\#42](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/42) ([JarbasAl](https://github.com/JarbasAl))
+- fix: init - accidentally remove gui kwarg [\#45](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/45) ([JarbasAl](https://github.com/JarbasAl))
 
 
 

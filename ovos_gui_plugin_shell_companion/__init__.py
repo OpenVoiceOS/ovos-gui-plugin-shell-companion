@@ -1,5 +1,6 @@
 import platform
 from os.path import join, dirname
+from typing import Optional, Any, Dict
 
 from ovos_bus_client import Message
 from ovos_bus_client.apis.gui import GUIInterface
@@ -26,15 +27,18 @@ class OVOSShellCompanionExtension(GUIExtension):
         bus: MessageBus instance
     """
 
-    def __init__(self, config: dict, bus: MessageBusClient = None):
+    def __init__(self, config: Dict[str, Any],
+                 bus: Optional[MessageBusClient] = None,
+                 gui: Optional[GUIInterface] = None):
         LOG.info("OVOS Shell: Initializing")
         bus = bus or get_mycroft_bus()
         config["homescreen_supported"] = True
         res_dir = join(dirname(__file__), "gui")
-        gui = GUIInterface("ovos_gui_plugin_shell_companion",
-                           bus=bus, config=Configuration().get("gui", {}),
-                           ui_directories={"qt5": join(res_dir, "qt5")})
-        LOG.info(f"Setting default qt5 resource directory to: {res_dir}/qt5")
+        gui = gui or GUIInterface("ovos_gui_plugin_shell_companion",
+                                  bus=bus, config=Configuration().get("gui", {}),
+                                  ui_directories={"qt5": join(res_dir, "qt5")})
+        gui.ui_directories["qt5"] = join(res_dir, "qt5")
+        LOG.info(f"Shell companion: qt5 resources directory: {res_dir}/qt5")
         super().__init__(config=config, bus=bus, gui=gui,
                          preload_gui=False, permanent=True)
         self.about_page_data = []
