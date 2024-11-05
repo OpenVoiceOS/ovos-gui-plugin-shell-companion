@@ -69,6 +69,7 @@ class OVOSShellCompanionExtension(GUIExtension):
         self.gui.register_handler("mycroft.device.settings.about.page", self.handle_device_about_page)
         self.gui.register_handler("mycroft.device.settings.display", self.handle_device_display_settings)
         self.gui.register_handler("mycroft.device.settings.factory", self.handle_device_display_factory)
+        self.gui.register_handler("mycroft.device.settings.wallpapers", self.handle_device_wallpaper_settings)
 
         # Display settings
         self.gui.register_handler("speaker.extension.display.set.auto.dim",
@@ -141,6 +142,10 @@ class OVOSShellCompanionExtension(GUIExtension):
         self.gui['display_auto_dim'] = self.config.get("auto_dim", False)
         self.gui['display_auto_nightmode'] = self.config.get("auto_nightmode", False)
         self.gui.show_page("AdditionalSettings", override_idle=True)
+
+    def handle_device_wallpaper_settings(self, message):
+        self.gui['state'] = 'settings/wallpaper_settings'
+        self.gui.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
 
     def handle_device_about_page(self, message):
         # TODO: Move `system_information` generation to util method
