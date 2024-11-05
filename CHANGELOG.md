@@ -1,12 +1,12 @@
 # Changelog
 
-## [1.0.1a1](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/1.0.1a1) (2024-11-04)
+## [1.0.2a1](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/1.0.2a1) (2024-11-05)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/1.0.0...1.0.1a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/1.0.1...1.0.2a1)
 
 **Merged pull requests:**
 
-- fix: there are no QT6 res files [\#38](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/38) ([JarbasAl](https://github.com/JarbasAl))
+- improve init and typing [\#42](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/42) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
