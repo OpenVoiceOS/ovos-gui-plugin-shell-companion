@@ -58,7 +58,7 @@ def get_description():
 
 PLUGIN_ENTRY_POINT = 'ovos-gui-plugin-shell-companion=ovos_gui_plugin_shell_companion:OVOSShellCompanionExtension'
 setup(
-    name='ovos-gui-plugin-shell-companion',
+    name='ovos_gui_plugin_shell_companion',
     version=get_version(),
     description='GUI plugin for ovos-shell',
     long_description=get_description(),
