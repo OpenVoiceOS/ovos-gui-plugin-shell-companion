@@ -1,12 +1,16 @@
 # Changelog
 
-## [1.0.5a1](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/1.0.5a1) (2025-06-08)
+## [1.0.6a1](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/1.0.6a1) (2025-11-05)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/1.0.4...1.0.5a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/1.0.5...1.0.6a1)
+
+**Closed issues:**
+
+- No such file or directory: '/etc/xdg' [\#22](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/issues/22)
 
 **Merged pull requests:**
 
-- fix: opm 1.X.X [\#49](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/49) ([JarbasAl](https://github.com/JarbasAl))
+- Update ovos-plugin-manager version constraint [\#51](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/51) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
