@@ -1,16 +1,12 @@
 # Changelog
 
-## [1.0.6a1](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/1.0.6a1) (2025-11-05)
+## [1.0.7a1](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/1.0.7a1) (2025-12-18)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/1.0.5...1.0.6a1)
-
-**Closed issues:**
-
-- No such file or directory: '/etc/xdg' [\#22](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/issues/22)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/1.0.6...1.0.7a1)
 
 **Merged pull requests:**
 
-- Update ovos-plugin-manager version constraint [\#51](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/51) ([JarbasAl](https://github.com/JarbasAl))
+- chore: Configure Renovate [\#53](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/53) ([renovate[bot]](https://github.com/apps/renovate))
 
 
 
