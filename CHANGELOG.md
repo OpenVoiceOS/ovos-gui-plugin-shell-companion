@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.7a2](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/1.0.7a2) (2025-12-19)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/1.0.7a1...1.0.7a2)
+
+**Merged pull requests:**
+
+- chore\(deps\): update dependency python to 3.14 [\#54](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/pull/54) ([renovate[bot]](https://github.com/apps/renovate))
+
 ## [1.0.7a1](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/tree/1.0.7a1) (2025-12-18)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion/compare/1.0.6...1.0.7a1)
